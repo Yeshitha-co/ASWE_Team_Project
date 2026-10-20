@@ -1,0 +1,12 @@
+# H2 in-memory profile: unit tests, API tests, CI. Fresh database on every run.
+spring:
+  datasource:
+    # MODE=PostgreSQL keeps SQL behaviour close to the persistent profile.
+    url: jdbc:h2:mem:licensegraph;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;DB_CLOSE_DELAY=-1
+    username: sa
+    password: ""
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      # Tables are built from the entities at startup and dropped at shutdown.
+      ddl-auto: create-drop
