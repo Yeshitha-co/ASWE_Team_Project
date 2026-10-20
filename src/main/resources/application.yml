@@ -7,6 +7,16 @@ spring:
     serialization:
       write-dates-as-timestamps: false
       write-date-timestamps-as-nanoseconds: false
+  # Persistence. Until integration day Hibernate builds the tables from each module's @Entity
+  # classes; ddl-auto is set per profile. The schema is then frozen into a Flyway migration and
+  # Flyway is switched on, with ddl-auto: validate.
+  jpa:
+    open-in-view: false
+  flyway:
+    enabled: false
+  profiles:
+    # Falls back to the in-memory H2 profile unless -Dspring.profiles.active=postgres is given.
+    default: test
 
 server:
   servlet:

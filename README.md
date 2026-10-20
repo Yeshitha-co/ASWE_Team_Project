@@ -74,18 +74,94 @@ mvn spring-boot:run
 
 `mvn clean test` compiles the project and runs the unit tests. `mvn spring-boot:run` starts the application. Spring Boot’s default port is 8080. No API routes are registered yet.
 
+## Database
+
+The service runs on one of two databases, chosen by Spring profile:
+
+| Profile | Database | Used for | Data after restart |
+| --- | --- | --- | --- |
+| `test` (default) | H2, in memory | Unit tests, API tests, CI, quick local runs | Lost |
+| `postgres` | PostgreSQL | Demo and deployment | Kept |
+
+If no profile is given, the `test` profile is used, so `mvn test` and CI need no database setup.
+
+Configuration lives in `src/main/resources`:
+
+- `application.yml`: settings shared by both profiles
+- `application-test.yml`: H2 connection
+- `application-postgres.yml`: PostgreSQL connection, read from the `DB_URL`, `DB_USER` and `DB_PASSWORD` environment variables. Credentials are never committed.
+
+### Run with PostgreSQL
+
+Only needed to run against a persistent database. Tests and everyday development use H2 and need no setup.
+
+1. Install PostgreSQL, using the [installer](https://www.postgresql.org/download/) or `brew install postgresql@17`, and make sure the server is running. With the installer, the command-line tools are in `/Library/PostgreSQL/17/bin` on macOS. Add that folder to `PATH` if `psql` is not found.
+
+2. Create a user and a database for LicenseGraph. Connect as the PostgreSQL superuser: `postgres` for the installer, or your macOS username for Homebrew.
+
+   ```bash
+   psql -h localhost -U postgres -c "CREATE USER licensegraph WITH PASSWORD 'choose-a-password';"
+   psql -h localhost -U postgres -c "CREATE DATABASE licensegraph OWNER licensegraph;"
+   ```
+
+   **With Docker instead of steps 1 and 2:** if you have [Docker Desktop](https://www.docker.com/products/docker-desktop/), the included `docker-compose.yml` starts PostgreSQL with the user and database already created. Data is kept in a Docker volume between restarts.
+
+   ```bash
+   export DB_USER=licensegraph
+   export DB_PASSWORD=choose-a-password
+   docker compose up -d
+   ```
+
+   Stop it with `docker compose down`. `docker compose down -v` also deletes the data.
+
+3. Start the application with the `postgres` profile:
+
+   ```bash
+   export DB_URL=jdbc:postgresql://localhost:5432/licensegraph
+   export DB_USER=licensegraph
+   export DB_PASSWORD=choose-a-password
+   mvn spring-boot:run -Dspring-boot.run.profiles=postgres
+   ```
+
+4. Confirm the tables were created:
+
+   ```bash
+   psql -h localhost -U licensegraph -d licensegraph -c '\dt'
+   ```
+
+   With Docker: `docker compose exec postgres psql -U licensegraph -d licensegraph -c '\dt'`.
+
+To start over with an empty database, drop and recreate it (with Docker, run `docker compose down -v` and then `docker compose up -d`):
+
+```bash
+psql -h localhost -U postgres -c "DROP DATABASE licensegraph;"
+psql -h localhost -U postgres -c "CREATE DATABASE licensegraph OWNER licensegraph;"
+```
+
+### Adding tables (all modules)
+
+Until integration day (Oct 22), Hibernate builds the tables from the `@Entity` classes, so a module only writes its entity and repository, with no SQL:
+
+- Put the entity anywhere under `com.licensegraph` and Spring finds it automatically.
+- Store the owning client in a `clientId` column and include it in every query, so another client's records return 404.
+- H2 uses `ddl-auto: create-drop` (clean tables on every run). PostgreSQL uses `ddl-auto: update` (adds missing tables and columns but never renames or removes them). After renaming or removing a field, reset your local database as shown above.
+
+On Oct 22 the schema is frozen: the SQL Hibernate generates is committed as a Flyway migration, and both profiles switch to Flyway with `ddl-auto: validate`. After that, every schema change is a new numbered migration file (for example `V2__add_column.sql`) in the same PR as the entity change. Flyway applies it on every database at startup.
+
 ## Current status
 
 Done:
 
 - E1: Maven Spring Boot skeleton, package layout, application config, and the shared contracts other modules code against.
+- B6: shared persistence setup: JPA, an in-memory H2 `test` profile (the default), a PostgreSQL `postgres` profile, and an optional Docker Compose file for local PostgreSQL (see [Database](#database)).
 
 Still in progress:
 
-- Module A, B, C, and D implementations
+- Module A, C, and D implementations
+- B1 through B5 and B7 through B10: asset entity and repository, asset registration and lookup endpoints with validation, `AssetLookup`, the derivation conflict checker, freezing the schema into a Flyway migration on integration day, the JaCoCo coverage check, final README assembly, and Module B tests
 - E2 through E8: client registration, API-key authentication, client isolation, shared error mapping, the REST Assured harness, GitHub release setup, and Module E tests
 
-There is no database profile, security filter, or controller yet.
+There is no security filter or controller yet.
 
 ## Planned API
 
