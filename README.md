@@ -72,7 +72,7 @@ mvn clean test
 mvn spring-boot:run
 ```
 
-`mvn clean test` compiles the project and runs the unit tests. `mvn spring-boot:run` starts the application. Spring Boot’s default port is 8080. No API routes are registered yet.
+`mvn clean test` compiles the project and runs the unit tests. `mvn spring-boot:run` starts the application. Spring Boot’s default port is 8080. The application starts once Module A's `PolicyLookup` and Module E's `ClientContext` are implemented; until then `mvn test` replaces them with mocks.
 
 ## Database
 
@@ -154,14 +154,15 @@ Done:
 
 - E1: Maven Spring Boot skeleton, package layout, application config, and the shared contracts other modules code against.
 - B6: shared persistence setup: JPA, an in-memory H2 `test` profile (the default), a PostgreSQL `postgres` profile, and an optional Docker Compose file for local PostgreSQL (see [Database](#database)).
+- B1 through B5: asset entity and client-scoped repository, `POST /api/assets` and `GET /api/assets/{assetId}/versions/{version}` with validation (`VALIDATION_ERROR`, `INVALID_ASSET_TYPE`, `DUPLICATE_ASSET_VERSION`, `UNKNOWN_POLICY_REFERENCE`, `ASSET_NOT_FOUND`), and the `AssetLookup` implementation, with unit tests.
 
 Still in progress:
 
 - Module A, C, and D implementations
-- B1 through B5 and B7 through B10: asset entity and repository, asset registration and lookup endpoints with validation, `AssetLookup`, the derivation conflict checker, freezing the schema into a Flyway migration on integration day, the JaCoCo coverage check, final README assembly, and Module B tests
+- B7 through B10: the derivation conflict checker, freezing the schema into a Flyway migration on integration day, the JaCoCo coverage check, final README assembly, and Module B API tests
 - E2 through E8: client registration, API-key authentication, client isolation, shared error mapping, the REST Assured harness, GitHub release setup, and Module E tests
 
-There is no security filter or controller yet.
+There is no security filter or shared error handler yet, so asset errors are thrown as the shared exceptions but not yet turned into the error format.
 
 ## Planned API
 
