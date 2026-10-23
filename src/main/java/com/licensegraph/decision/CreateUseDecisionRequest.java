@@ -22,11 +22,11 @@ import jakarta.validation.constraints.NotNull;
  *
  * @param assetId non-blank identifier of the target asset
  * @param version positive version number of the target asset
- * @param use intended use to evaluate
+ * @param intendedUse intended use to evaluate
  */
 public record CreateUseDecisionRequest(
         @NotBlank String assetId,
         @Min(1) int version,
-        @NotNull IntendedUse use
+        @NotNull IntendedUse intendedUse
 ) {
 }

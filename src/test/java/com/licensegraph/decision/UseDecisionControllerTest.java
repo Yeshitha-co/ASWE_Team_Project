@@ -1,7 +1,7 @@
 
 package com.licensegraph.decision;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+
 import com.licensegraph.common.*;
 import com.licensegraph.security.ClientContext;
 
@@ -58,7 +58,7 @@ class UseDecisionControllerTest {
                 IntendedUse.COMMERCIAL,
                 Decision.ALLOW,
                 List.of(),
-                List.of(),
+                List.of(new PolicyRef("license-A", 1)),
                 List.of()
         );
 
@@ -80,14 +80,18 @@ class UseDecisionControllerTest {
                                 {
                                   "assetId": "Model-C",
                                   "version": 1,
-                                  "use": "COMMERCIAL"
+                                  "intendedUse": "commercial"
                                 }
                                 """))
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.decisionId")
                         .value("decision-123"))
                 .andExpect(jsonPath("$.result.decision")
-                        .value("allow"));
+                        .value("ALLOW"))
+                .andExpect(jsonPath("$.result.target")
+                        .value("Model-C:v1"))
+                .andExpect(jsonPath("$.result.evaluatedPolicies[0]")
+                        .value("license-A:v1"));
 
         verify(useDecisionService).decideAndRecord(
                 "client-1",
@@ -125,7 +129,9 @@ class UseDecisionControllerTest {
                 .andExpect(jsonPath("$.decisionId")
                         .value("decision-456"))
                 .andExpect(jsonPath("$.result.decision")
-                        .value("deny"));
+                        .value("DENY"))
+                .andExpect(jsonPath("$.result.target")
+                        .value("Model-C:v1"));
 
         verify(decisionAuditStore).findById(
                 "client-1", "decision-456"
@@ -161,7 +167,11 @@ class UseDecisionControllerTest {
                         .param("version", "1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].decisionId")
-                        .value("decision-789"));
+                        .value("decision-789"))
+                .andExpect(jsonPath("$[0].result.decision")
+                        .value("ALLOW"))
+                .andExpect(jsonPath("$[0].result.target")
+                        .value("Model-C:v1"));
 
         verify(decisionAuditStore).findByTarget(
                 "client-1", target
@@ -194,7 +204,7 @@ class UseDecisionControllerTest {
                             {
                               "assetId": "",
                               "version": 0,
-                              "use": null
+                              "intendedUse": null
                             }
                             """))
                 .andExpect(status().isBadRequest());

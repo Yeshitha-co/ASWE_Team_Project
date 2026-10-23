@@ -9,7 +9,15 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 
-import org.springframework.web.bind.annotation.*;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
@@ -65,22 +73,24 @@ public class UseDecisionController {
      * @param request validated asset version and intended use
      * @return newly recorded use decision
      */
+
     @PostMapping
-    public UseDecisionRecord createDecision(
+    @ResponseStatus(HttpStatus.CREATED)
+    public UseDecisionResponse createDecision(
             @Valid @RequestBody CreateUseDecisionRequest request) {
 
         String clientId = clientContext.currentClientId();
 
         AssetRef target = new AssetRef(
                 request.assetId(),
-                request.version()
-        );
+                request.version());
 
-        return useDecisionService.decideAndRecord(
+        UseDecisionRecord record = useDecisionService.decideAndRecord(
                 clientId,
                 target,
-                request.use()
-        );
+                request.intendedUse());
+
+        return UseDecisionResponse.from(record);
     }
 
     /**
@@ -99,17 +109,19 @@ public class UseDecisionController {
      * @return matching decision audit record
      * @throws NotFoundException if no matching client-scoped decision exists
      */
+
     @GetMapping("/{decisionId}")
-    public UseDecisionRecord getDecision(
+    public UseDecisionResponse getDecision(
             @PathVariable String decisionId) {
 
         String clientId = clientContext.currentClientId();
 
-        return decisionAuditStore.findById(clientId, decisionId)
-                .orElseThrow(() ->
-                        NotFoundException.decision(decisionId)
-                );
+        UseDecisionRecord record = decisionAuditStore.findById(clientId, decisionId)
+                .orElseThrow(() -> NotFoundException.decision(decisionId));
+
+        return UseDecisionResponse.from(record);
     }
+
 
     /**
      * Retrieves saved decision history for an asset version.
@@ -124,15 +136,18 @@ public class UseDecisionController {
      * @param version version of the evaluated asset
      * @return saved decisions matching the requested asset version
      */
+
     @GetMapping
-    public List<UseDecisionRecord> getDecisionHistory(
+    public List<UseDecisionResponse> getDecisionHistory(
             @RequestParam @NotBlank String assetId,
             @RequestParam @Min(1) int version) {
 
         String clientId = clientContext.currentClientId();
-
         AssetRef target = new AssetRef(assetId, version);
 
-        return decisionAuditStore.findByTarget(clientId, target);
+        return decisionAuditStore.findByTarget(clientId, target)
+                .stream()
+                .map(UseDecisionResponse::from)
+                .toList();
     }
 }
