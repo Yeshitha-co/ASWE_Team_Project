@@ -47,7 +47,9 @@ public class LineageQueryServiceImpl implements LineageQueryService {
         return walk(clientId, source, false);
     }
 
-    /** Throws 404 ASSET_NOT_FOUND when the asset is unknown or belongs to another client. */
+    /**
+     * Throws 404 ASSET_NOT_FOUND when the asset is unknown or belongs to another client.
+     */
     private void requireAsset(String clientId, AssetRef ref) {
         if (assets.findAsset(clientId, ref).isEmpty()) {
             throw new NotFoundException(ErrorCode.ASSET_NOT_FOUND, "Asset not found: " + ref);
@@ -79,7 +81,9 @@ public class LineageQueryServiceImpl implements LineageQueryService {
         return new LineageGraph(root, visited, found);
     }
 
-    /** Direct parents when walking up, direct children when walking down. */
+    /**
+     * Direct parents when walking up, direct children when walking down.
+     */
     private List<DerivationEdge> neighbours(String clientId, AssetRef node, boolean upward) {
         if (upward) {
             return edges.findByClientIdAndOutputAssetIdAndOutputVersion(

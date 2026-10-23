@@ -33,7 +33,6 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
  * Tests ancestor and descendant walks against a real in-memory database, with Module B's
  * asset lookup mocked (C9).
  */
-// AI-assisted: drafted with Claude, reviewed by Srishti Singh.
 @DataJpaTest
 @Import(LineageQueryServiceImpl.class)
 class LineageQueryServiceImplTest {

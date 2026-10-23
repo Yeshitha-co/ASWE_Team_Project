@@ -37,7 +37,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * per-client lock, so two concurrent requests cannot jointly form a cycle. Any failure rolls
  * back the whole batch.
  */
-// AI-assisted: drafted with Claude, reviewed by Srishti Singh.
+
 @Service
 public class DerivationServiceImpl implements DerivationService {
 
@@ -47,9 +47,14 @@ public class DerivationServiceImpl implements DerivationService {
     private final LineageQueryService lineage;
     private final TransactionTemplate transaction;
 
-    /** One lock object per client. Same client waits; different clients never block each other. */
+    /**
+     * One lock object per client. Same client waits; different clients never block each other.
+     */
     private final ConcurrentMap<String, Object> clientLocks = new ConcurrentHashMap<>();
 
+    /**
+     * Wires the edge repository, Module B collaborators, lineage queries and transactions.
+     */
     public DerivationServiceImpl(DerivationEdgeRepository edges,
                                  AssetLookup assets,
                                  DerivationConflictChecker conflictChecker,
@@ -63,9 +68,11 @@ public class DerivationServiceImpl implements DerivationService {
     }
 
     @Override
-    public DerivationResult recordDerivation(String clientId, AssetRef output, List<DerivationInput> inputs) {
+    public DerivationResult recordDerivation(String clientId, AssetRef output,
+                                             List<DerivationInput> inputs) {
         if (inputs == null || inputs.isEmpty()) {
-            throw new BadRequestException(ErrorCode.VALIDATION_ERROR, "At least one input is required");
+            throw new BadRequestException(ErrorCode.VALIDATION_ERROR, "At least one input is "
+                    + "required");
         }
         // The lock is held until the transaction has committed, so the next request sees our edges.
         Object clientLock = clientLocks.computeIfAbsent(clientId, id -> new Object());
@@ -74,7 +81,8 @@ public class DerivationServiceImpl implements DerivationService {
         }
     }
 
-    private DerivationResult recordInTransaction(String clientId, AssetRef output, List<DerivationInput> inputs) {
+    private DerivationResult recordInTransaction(String clientId, AssetRef output,
+                                                 List<DerivationInput> inputs) {
         // Step 2: every referenced asset must exist for this client (C2).
         requireKnown(clientId, output);
         for (DerivationInput input : inputs) {
@@ -103,9 +111,13 @@ public class DerivationServiceImpl implements DerivationService {
         Instant now = Instant.now();
         List<DerivationEdge> toSave = new ArrayList<>();
         for (DerivationInput input : inputs) {
-            DerivationEdge edge = new DerivationEdge(clientId, input.asset(), output, input.relation(), now);
+            DerivationEdge edge = new DerivationEdge(clientId, input.asset(), output,
+                    input.relation(), now);
             Set<AssetRef> upstream = upstreamByInput.get(input.asset()).nodes();
-            edge.recordConflicts(conflicts.stream().filter(c -> upstream.contains(c.source())).toList());
+            List<PolicyConflict> ownConflicts = conflicts.stream()
+                    .filter(c -> upstream.contains(c.source()))
+                    .toList();
+            edge.recordConflicts(ownConflicts);
             toSave.add(edge);
         }
         List<LineageEdge> created = edges.saveAll(toSave).stream()
@@ -120,7 +132,9 @@ public class DerivationServiceImpl implements DerivationService {
         return new DerivationResult(created, conflicts, ancestors.size());
     }
 
-    /** 422 UNKNOWN_INPUT_ASSET when the asset is missing or belongs to another client. */
+    /**
+     * 422 UNKNOWN_INPUT_ASSET when the asset is missing or belongs to another client.
+     */
     private void requireKnown(String clientId, AssetRef ref) {
         if (assets.findAsset(clientId, ref).isEmpty()) {
             throw new UnprocessableEntityException(
@@ -132,7 +146,8 @@ public class DerivationServiceImpl implements DerivationService {
      * Walks up from the input. If the output is reached, adding input -> output would close a
      * loop. Returns the path [output, input, ..., output], matching the plan's cyclePath format.
      */
-    private Optional<List<AssetRef>> findCyclePath(String clientId, AssetRef input, AssetRef output) {
+    private Optional<List<AssetRef>> findCyclePath(String clientId, AssetRef input,
+                                                   AssetRef output) {
         if (input.equals(output)) {
             return Optional.of(List.of(output, input));
         }
@@ -160,8 +175,11 @@ public class DerivationServiceImpl implements DerivationService {
         return Optional.empty();
     }
 
-    /** Follows the reachedFrom links back to the input, then puts the output in front. */
-    private List<AssetRef> buildPath(AssetRef output, AssetRef found, Map<AssetRef, AssetRef> reachedFrom) {
+    /**
+     * Follows the reachedFrom links back to the input, then puts the output in front.
+     */
+    private List<AssetRef> buildPath(AssetRef output, AssetRef found,
+                                     Map<AssetRef, AssetRef> reachedFrom) {
         LinkedList<AssetRef> path = new LinkedList<>();
         for (AssetRef node = found; node != null; node = reachedFrom.get(node)) {
             path.addFirst(node);
@@ -170,14 +188,16 @@ public class DerivationServiceImpl implements DerivationService {
         return path;
     }
 
-    /** 409 DUPLICATE_EDGE if an identical edge is already stored or repeated in this request. */
+    /**
+     * 409 DUPLICATE_EDGE if an identical edge is already stored or repeated in this request.
+     */
     private void rejectDuplicates(String clientId, AssetRef output, List<DerivationInput> inputs) {
         Set<String> seenInRequest = new HashSet<>();
         for (DerivationInput input : inputs) {
             AssetRef in = input.asset();
             boolean repeated = !seenInRequest.add(in + "|" + input.relation());
-            boolean stored = edges.existsByClientIdAndInputAssetIdAndInputVersionAndOutputAssetIdAndOutputVersionAndRelation(
-                    clientId, in.assetId(), in.version(), output.assetId(), output.version(), input.relation());
+            boolean stored = edges.existsEdge(clientId, in.assetId(), in.version(),
+                    output.assetId(), output.version(), input.relation());
             if (repeated || stored) {
                 throw ConflictException.duplicateEdge();
             }

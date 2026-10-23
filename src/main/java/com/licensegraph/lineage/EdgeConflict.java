@@ -30,7 +30,9 @@ public class EdgeConflict {
     @Column(name = "conflict_field", nullable = false)
     private String field;
 
-    /** Required by JPA. */
+    /**
+     * Required by JPA.
+     */
     protected EdgeConflict() {
     }
 
@@ -42,12 +44,16 @@ public class EdgeConflict {
         this.field = field;
     }
 
-    /** Converts Module B's conflict record into a storable row. */
+    /**
+     * Converts Module B's conflict record into a storable row.
+     */
     public static EdgeConflict from(PolicyConflict conflict) {
         return new EdgeConflict(conflict.source(), conflict.policy(), conflict.field());
     }
 
-    /** Converts the stored row back into Module B's shared record. */
+    /**
+     * Converts the stored row back into Module B's shared record.
+     */
     public PolicyConflict toPolicyConflict() {
         return new PolicyConflict(
                 new AssetRef(sourceAssetId, sourceVersion),

@@ -34,7 +34,6 @@ import org.springframework.test.web.servlet.MockMvc;
  * Tests the Module C REST layer with the services mocked: status codes, request validation,
  * response shape, and that the client id comes from ClientContext (C2, C7, C9).
  */
-// AI-assisted: drafted with Claude, reviewed by Srishti Singh.
 @WebMvcTest(DerivationController.class)
 @AutoConfigureMockMvc(addFilters = false)
 class DerivationControllerTest {

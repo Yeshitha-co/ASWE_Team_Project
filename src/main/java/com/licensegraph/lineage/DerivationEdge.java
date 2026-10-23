@@ -37,8 +37,10 @@ import java.util.List;
                 columnNames = {"client_id", "input_asset_id", "input_version",
                         "output_asset_id", "output_version", "relation"}),
         indexes = {
-                @Index(name = "ix_edge_by_output", columnList = "client_id, output_asset_id, output_version"),
-                @Index(name = "ix_edge_by_input", columnList = "client_id, input_asset_id, input_version")
+                @Index(name = "ix_edge_by_output", columnList = "client_id, output_asset_id, "
+                       + "output_version"),
+                @Index(name = "ix_edge_by_input", columnList = "client_id, input_asset_id, "
+                       + "input_version")
         })
 public class DerivationEdge {
 
@@ -72,11 +74,15 @@ public class DerivationEdge {
     @CollectionTable(name = "derivation_edge_conflict", joinColumns = @JoinColumn(name = "edge_id"))
     private List<EdgeConflict> conflicts = new ArrayList<>();
 
-    /** Required by JPA. */
+    /**
+     * Required by JPA.
+     */
     protected DerivationEdge() {
     }
 
-    /** Creates a new edge for one input of a derivation request. */
+    /**
+     * Creates a new edge for one input of a derivation request.
+     */
     public DerivationEdge(String clientId, AssetRef input, AssetRef output,
                           RelationType relation, Instant createdAt) {
         this.clientId = clientId;
@@ -88,7 +94,9 @@ public class DerivationEdge {
         this.createdAt = createdAt;
     }
 
-    /** Attaches the conflicts Module B found for this edge's input (C5). */
+    /**
+     * Attaches the conflicts Module B found for this edge's input (C5).
+     */
     public void recordConflicts(List<PolicyConflict> found) {
         for (PolicyConflict conflict : found) {
             conflicts.add(EdgeConflict.from(conflict));
@@ -123,12 +131,16 @@ public class DerivationEdge {
         return conflicts.stream().map(EdgeConflict::toPolicyConflict).toList();
     }
 
-    /** Converts this row into the shared record other modules read. */
+    /**
+     * Converts this row into the shared record other modules read.
+     */
     public LineageEdge toLineageEdge() {
         return new LineageEdge(input(), output(), relation);
     }
 
-    /** Unmodifiable view, mainly for tests. */
+    /**
+     * Unmodifiable view, mainly for tests.
+     */
     List<EdgeConflict> storedConflicts() {
         return Collections.unmodifiableList(conflicts);
     }

@@ -1,9 +1,10 @@
 package com.licensegraph.lineage;
 
-import java.util.List;
-
 import com.licensegraph.common.RelationType;
+import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 /**
  * Data access for derivation edges (C1). Used only inside Module C; other modules go through
@@ -21,7 +22,17 @@ public interface DerivationEdgeRepository extends JpaRepository<DerivationEdge, 
             String clientId, String inputAssetId, int inputVersion);
 
     /** True when this exact edge is already stored. Used for 409 DUPLICATE_EDGE. */
-    boolean existsByClientIdAndInputAssetIdAndInputVersionAndOutputAssetIdAndOutputVersionAndRelation(
-            String clientId, String inputAssetId, int inputVersion,
-            String outputAssetId, int outputVersion, RelationType relation);
+    @Query("""
+            select count(e) > 0 from DerivationEdge e
+            where e.clientId = :clientId
+              and e.inputAssetId = :inputAssetId and e.inputVersion = :inputVersion
+              and e.outputAssetId = :outputAssetId and e.outputVersion = :outputVersion
+              and e.relation = :relation
+            """)
+    boolean existsEdge(@Param("clientId") String clientId,
+                       @Param("inputAssetId") String inputAssetId,
+                       @Param("inputVersion") int inputVersion,
+                       @Param("outputAssetId") String outputAssetId,
+                       @Param("outputVersion") int outputVersion,
+                       @Param("relation") RelationType relation);
 }

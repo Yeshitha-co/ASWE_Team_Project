@@ -18,7 +18,6 @@ import org.springframework.web.bind.annotation.RestController;
  * REST endpoints for Module C: record a derivation, and read ancestors or descendants (C2, C7).
  * The caller's client id always comes from {@link ClientContext}, never from the request body.
  */
-// AI-assisted: drafted with Claude, reviewed by Srishti Singh.
 @RestController
 @RequestMapping("/api")
 public class DerivationController {
@@ -27,6 +26,9 @@ public class DerivationController {
     private final LineageQueryService lineage;
     private final ClientContext clientContext;
 
+    /**
+     * Wires the derivation and lineage services with the caller's client context.
+     */
     public DerivationController(DerivationService derivations,
                                 LineageQueryService lineage,
                                 ClientContext clientContext) {
@@ -35,7 +37,9 @@ public class DerivationController {
         this.clientContext = clientContext;
     }
 
-    /** POST /api/derivations: 201 with created edges, conflicts and the output's ancestor count. */
+    /**
+     * POST /api/derivations: 201 with created edges, conflicts and the output's ancestor count.
+     */
     @PostMapping("/derivations")
     @ResponseStatus(HttpStatus.CREATED)
     public DerivationResponse recordDerivation(@Valid @RequestBody DerivationRequest request) {
@@ -45,17 +49,23 @@ public class DerivationController {
         return DerivationResponse.from(output, result);
     }
 
-    /** GET /api/assets/{assetId}/versions/{version}/ancestors: 200 with the upstream subgraph. */
+    /**
+     * GET /api/assets/{assetId}/versions/{version}/ancestors: 200 with the upstream subgraph.
+     */
     @GetMapping("/assets/{assetId}/versions/{version}/ancestors")
     public GraphResponse ancestors(@PathVariable String assetId, @PathVariable int version) {
         return GraphResponse.from(
-                lineage.findAncestors(clientContext.currentClientId(), new AssetRef(assetId, version)));
+                lineage.findAncestors(clientContext.currentClientId(), new AssetRef(assetId,
+                        version)));
     }
 
-    /** GET /api/assets/{assetId}/versions/{version}/descendants: 200 with the downstream subgraph. */
+    /**
+     * GET /api/assets/{assetId}/versions/{version}/descendants: 200 with the downstream subgraph.
+     */
     @GetMapping("/assets/{assetId}/versions/{version}/descendants")
     public GraphResponse descendants(@PathVariable String assetId, @PathVariable int version) {
         return GraphResponse.from(
-                lineage.findDescendants(clientContext.currentClientId(), new AssetRef(assetId, version)));
+                lineage.findDescendants(clientContext.currentClientId(), new AssetRef(assetId,
+                        version)));
     }
 }

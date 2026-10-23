@@ -11,29 +11,39 @@ import java.util.List;
  * Response bodies for Module C endpoints. Assets and policies are printed as "model-C:v1"
  * and "license-A:v1", following the Section 10 naming convention.
  */
-// AI-assisted: drafted with Claude, reviewed by Srishti Singh.
 public final class LineageResponses {
 
     private LineageResponses() {
     }
 
-    /** One edge, input to output. */
+    /**
+     * One edge, input to output.
+     */
     public record EdgeBody(String input, String output, RelationType relation) {
         static EdgeBody from(LineageEdge edge) {
             return new EdgeBody(edge.input().toString(), edge.output().toString(), edge.relation());
         }
     }
 
-    /** One upstream policy conflict reported by Module B. */
+    /**
+     * One upstream policy conflict reported by Module B.
+     */
     public record ConflictBody(String source, String policy, String field) {
         static ConflictBody from(PolicyConflict conflict) {
-            return new ConflictBody(conflict.source().toString(), conflict.policy().toString(), conflict.field());
+            return new ConflictBody(conflict.source().toString(), conflict.policy().toString(),
+                    conflict.field());
         }
     }
 
-    /** 201 body for POST /api/derivations. */
+    /**
+     * 201 body for POST /api/derivations.
+     */
     public record DerivationResponse(String output, List<EdgeBody> created,
                                      List<ConflictBody> conflicts, int ancestorCount) {
+
+        /**
+         * Builds the 201 body from the recorded derivation.
+         */
         public static DerivationResponse from(AssetRef output, DerivationResult result) {
             return new DerivationResponse(
                     output.toString(),
@@ -43,8 +53,14 @@ public final class LineageResponses {
         }
     }
 
-    /** 200 body for the ancestors and descendants endpoints. Nodes include the root, sorted by name. */
+    /**
+     * 200 body for the ancestors and descendants endpoints. Nodes include the root, sorted by name.
+     */
     public record GraphResponse(String root, List<String> nodes, List<EdgeBody> edges) {
+
+        /**
+         * Builds the 200 body from a lineage subgraph.
+         */
         public static GraphResponse from(LineageGraph graph) {
             return new GraphResponse(
                     graph.root().toString(),

@@ -14,7 +14,6 @@ import java.util.Set;
  * <p>Chain: dataset-A:v1 -> model-B:v1 -> model-C:v1.
  * Diamond: base:v1 -> left:v1, base:v1 -> right:v1, left:v1 -> merged:v1, right:v1 -> merged:v1.
  */
-// AI-assisted: drafted with Claude, reviewed by Srishti Singh.
 public final class LineageFixtures {
 
     public static final String CLIENT = "client-a";
