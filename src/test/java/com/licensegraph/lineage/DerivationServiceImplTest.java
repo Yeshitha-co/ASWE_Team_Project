@@ -25,6 +25,7 @@ import com.licensegraph.common.DerivationInput;
 import com.licensegraph.common.LineageEdge;
 import com.licensegraph.common.PolicyRef;
 import com.licensegraph.common.RelationType;
+import com.licensegraph.common.exception.BadRequestException;
 import com.licensegraph.common.exception.ConflictException;
 import com.licensegraph.common.exception.ErrorCode;
 import com.licensegraph.common.exception.UnprocessableEntityException;
@@ -53,7 +54,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * conflicts, client isolation and concurrent requests (C9). Each test commits for real so the
  * concurrency test sees what other threads wrote; tables are cleared after every test.
  */
-// AI-assisted: drafted with Claude, reviewed by Srishti Singh.
+
 @DataJpaTest
 @Import({DerivationServiceImpl.class, LineageQueryServiceImpl.class})
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
@@ -210,6 +211,41 @@ class DerivationServiceImplTest {
         } finally {
             pool.shutdownNow();
         }
+    }
+
+    @Test
+    void emptyInputsAreRejected() {
+        assertThatThrownBy(() -> service.recordDerivation(CLIENT, MODEL_B, List.of()))
+                .isInstanceOf(BadRequestException.class);
+        assertThat(repository.count()).isZero();
+    }
+
+    @Test
+    void eachEdgeKeepsItsOwnRelationLabel() {
+        DerivationResult result = service.recordDerivation(CLIENT, MERGED, List.of(
+                in(LEFT, RelationType.MERGED_FROM), in(RIGHT, RelationType.FILTERED_FROM)));
+
+        assertThat(result.created()).containsExactlyInAnyOrder(
+                new LineageEdge(LEFT, MERGED, RelationType.MERGED_FROM),
+                new LineageEdge(RIGHT, MERGED, RelationType.FILTERED_FROM));
+    }
+
+    @Test
+    void selfCycleReportsTwoStepPath() {
+        assertThatThrownBy(() -> service.recordDerivation(
+                CLIENT, MODEL_B, List.of(in(MODEL_B, RelationType.DERIVED_FROM))))
+                .isInstanceOfSatisfying(ConflictException.class, e ->
+                        assertThat(e.details().get("cyclePath")).isEqualTo(List.of("model-B:v1", "model-B:v1")));
+    }
+
+    @Test
+    void failureAfterValidationSavesNothing() {
+        when(conflictChecker.check(any(), any(), any())).thenThrow(new IllegalStateException("checker down"));
+
+        assertThatThrownBy(() -> service.recordDerivation(CLIENT, MERGED, List.of(
+                in(LEFT, RelationType.MERGED_FROM), in(RIGHT, RelationType.MERGED_FROM))))
+                .isInstanceOf(IllegalStateException.class);
+        assertThat(repository.count()).isZero();
     }
 
     /** Waits for the start signal, then records output-from-input; returns "ok" or the error code. */
