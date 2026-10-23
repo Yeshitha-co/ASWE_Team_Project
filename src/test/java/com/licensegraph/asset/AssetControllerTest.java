@@ -15,6 +15,7 @@ import java.time.Instant;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -27,9 +28,13 @@ import org.springframework.test.web.servlet.MockMvc;
  * <p>Error responses are produced by Module E's exception handler and are covered by the API
  * tests once it exists; {@link AssetServiceTest} checks which exception each error raises.
  *
+ * <p>The API-key filter is switched off here ({@code addFilters = false}) because
+ * {@link ClientContext} is mocked; authentication is tested by Module E.
+ *
  * <p>AI-assisted (Claude): tests drafted with Claude, reviewed by the Module B owner.
  */
 @WebMvcTest(AssetController.class)
+@AutoConfigureMockMvc(addFilters = false)
 class AssetControllerTest {
 
     private static final AssetResponse DATASET_A_V1 = new AssetResponse("dataset-A", 1, "dataset-A:v1",
