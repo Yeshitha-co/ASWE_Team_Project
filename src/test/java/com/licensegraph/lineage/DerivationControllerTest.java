@@ -13,8 +13,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.licensegraph.asset.PolicyConflict;
 import com.licensegraph.common.LineageEdge;
 import com.licensegraph.common.LineageGraph;
+import com.licensegraph.common.PolicyRef;
 import com.licensegraph.common.RelationType;
 import com.licensegraph.security.ClientContext;
 import java.util.List;
@@ -57,7 +59,8 @@ class DerivationControllerTest {
     @Test
     void postReturns201WithCreatedEdgesAndAncestorCount() throws Exception {
         when(derivations.recordDerivation(eq(CLIENT), eq(MODEL_C), any())).thenReturn(new DerivationResult(
-                List.of(new LineageEdge(MODEL_B, MODEL_C, RelationType.FINE_TUNED_FROM)), List.of(), 2));
+                List.of(new LineageEdge(MODEL_B, MODEL_C, RelationType.FINE_TUNED_FROM)),
+                List.of(new PolicyConflict(DATASET_A, new PolicyRef("license-A", 1), "derivatives")), 2));
 
         mvc.perform(post("/api/derivations").contentType(MediaType.APPLICATION_JSON).content("""
                         {"output": {"assetId": "model-C", "version": 1},
@@ -68,7 +71,9 @@ class DerivationControllerTest {
                 .andExpect(jsonPath("$.created[0].input").value("model-B:v1"))
                 .andExpect(jsonPath("$.created[0].output").value("model-C:v1"))
                 .andExpect(jsonPath("$.ancestorCount").value(2))
-                .andExpect(jsonPath("$.conflicts").isEmpty());
+                .andExpect(jsonPath("$.conflicts[0].source").value("dataset-A:v1"))
+                .andExpect(jsonPath("$.conflicts[0].policy").value("license-A:v1"))
+                .andExpect(jsonPath("$.conflicts[0].field").value("derivatives"));
     }
 
     @Test
