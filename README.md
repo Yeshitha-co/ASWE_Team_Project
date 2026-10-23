@@ -72,7 +72,7 @@ mvn clean test
 mvn spring-boot:run
 ```
 
-`mvn clean test` compiles the project and runs the unit tests. `mvn spring-boot:run` starts the application. Spring Boot’s default port is 8080. The application starts once Module A's `PolicyLookup` and Module E's `ClientContext` are implemented; until then `mvn test` replaces them with mocks.
+`mvn clean test` compiles the project and runs the unit tests. `mvn spring-boot:run` starts the application. Spring Boot’s default port is 8080.
 
 ## Tests and coverage
 
@@ -168,6 +168,11 @@ On Oct 22 the schema is frozen: the SQL Hibernate generates is committed as a Fl
 Done:
 
 - E1: Maven Spring Boot skeleton, package layout, application config, and the shared contracts other modules code against.
+- E2: `POST /api/clients` creates an API key from a secure random source, stores only its SHA-256 hash, and returns the raw key once.
+- E3: `X-API-Key` filter. A missing key is `401 MISSING_API_KEY`. An unknown key is `401 INVALID_API_KEY`. `ClientContext` exposes the caller. Request bodies are not trusted for `clientId`.
+- E5: `GlobalExceptionHandler` maps shared exceptions to the error body below. Unexpected failures return `500` with code `INTERNAL_ERROR` and a fixed message. That code is not one of the Section 10 business codes.
+- E6: `ApiTestBase` starts the application, registers a client, and attaches `X-API-Key` for REST Assured API tests.
+- E8: unit and API tests for client registration, hashed keys, missing and invalid keys, caller identity, and error mapping.
 - B6: shared persistence setup: JPA, an in-memory H2 `test` profile (the default), a PostgreSQL `postgres` profile, and an optional Docker Compose file for local PostgreSQL (see [Database](#database)).
 - B1 through B5: asset entity and client-scoped repository, `POST /api/assets` and `GET /api/assets/{assetId}/versions/{version}` with validation (`VALIDATION_ERROR`, `INVALID_ASSET_TYPE`, `DUPLICATE_ASSET_VERSION`, `UNKNOWN_POLICY_REFERENCE`, `ASSET_NOT_FOUND`), and the `AssetLookup` implementation, with unit tests.
 - B7: `DerivationConflictChecker`, which reports upstream `derivatives` and `aiTraining` conflicts for new derivations, with unit tests.
@@ -175,21 +180,35 @@ Done:
 
 Still in progress:
 
-- Module A, C, and D implementations
 - B6 follow-up: freeze the schema into a Flyway migration once every module's entities are on `main`
 - B9: assemble the README sections from every module (due Oct 23)
-- B10: REST Assured API tests for the asset endpoints, once the shared harness (E6) is available
-- E2 through E8: client registration, API-key authentication, client isolation, shared error mapping, the REST Assured harness, GitHub release setup, and Module E tests
+- B10: REST Assured API tests for the asset endpoints, using the shared harness (E6)
+- E4 cross-client 404 for policies, assets, edges, and decisions, once those endpoints are merged. Their lookups already take `clientId` on their own branches.
+- E7: branch protection, issue templates, and the Projects board are not set up on the repository. The release tag is not created yet.
 
-There is no security filter or shared error handler yet. Until they land, the application does not start outside tests, and asset errors are thrown as the shared exceptions but not yet turned into the error format.
+## Client registration
+
+`POST /api/clients` needs no API key and no body.
+
+```bash
+curl -i -X POST http://localhost:8080/api/clients
+```
+
+`201 Created`:
+
+```json
+{ "clientId": "generated-uuid", "apiKey": "shown-once" }
+```
+
+The database stores `clientId` and the SHA-256 hex digest of `apiKey`. A later request cannot read the raw key back. Send the key on later calls as `X-API-Key`. A request to any other path without that header returns `401` with `code` `MISSING_API_KEY`. A wrong key returns `401` with `code` `INVALID_API_KEY`. A `clientId` field in the registration body is ignored.
 
 ## Planned API
 
-These routes are specified for T2. The asset routes (Module B) are implemented, see [Module B: Assets](#module-b-assets); the rest are planned. Every route will require an `X-API-Key` header except client registration.
+These routes are specified for T2. Client registration (E), assets (B), derivations and lineage (C) and use decisions (D) are implemented; the policy routes (A) arrive with Module A's pull request. Every route requires an `X-API-Key` header except client registration.
 
-| Method | Route | Module | Planned success |
+| Method | Route | Module | Success |
 | --- | --- | --- | --- |
-| POST | `/api/clients` | E | 201, API key returned once |
+| POST | `/api/clients` | E | 201, API key returned once (implemented) |
 | POST | `/api/policies` | A | 201 |
 | GET | `/api/policies/{policyId}/versions` | A | 200 |
 | GET | `/api/policies/{policyId}/versions/{version}` | A | 200 |
@@ -368,7 +387,7 @@ Planned error body:
 }
 ```
 
-Status codes used across the service:
+`401 MISSING_API_KEY` and `401 INVALID_API_KEY` are returned by the API-key filter. The other codes are mapped by `GlobalExceptionHandler` when a module throws the matching shared exception. Per-endpoint examples for Modules A–D will be added as those routes are merged:
 
 | Status | Codes |
 | --- | --- |
