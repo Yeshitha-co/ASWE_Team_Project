@@ -72,7 +72,7 @@ mvn clean test
 mvn spring-boot:run
 ```
 
-`mvn clean test` compiles the project and runs the unit tests. `mvn spring-boot:run` starts the application. Spring Boot’s default port is 8080. No API routes are registered yet.
+`mvn clean test` compiles the project and runs the unit tests. `mvn spring-boot:run` starts the application. Spring Boot’s default port is 8080. The only implemented route is `POST /api/clients`. Every other path requires an `X-API-Key` header.
 
 ## Database
 
@@ -153,23 +153,43 @@ On Oct 22 the schema is frozen: the SQL Hibernate generates is committed as a Fl
 Done:
 
 - E1: Maven Spring Boot skeleton, package layout, application config, and the shared contracts other modules code against.
+- E2: `POST /api/clients` creates an API key from a secure random source, stores only its SHA-256 hash, and returns the raw key once.
+- E3: `X-API-Key` filter. A missing key is `401 MISSING_API_KEY`. An unknown key is `401 INVALID_API_KEY`. `ClientContext` exposes the caller. Request bodies are not trusted for `clientId`.
+- E5: `GlobalExceptionHandler` maps shared exceptions to the error body below. Unexpected failures return `500` with code `INTERNAL_ERROR` and a fixed message. That code is not one of the Section 10 business codes.
+- E6: `ApiTestBase` starts the application, registers a client, and attaches `X-API-Key` for REST Assured API tests.
+- E8: unit and API tests for client registration, hashed keys, missing and invalid keys, caller identity, and error mapping.
 - B6: shared persistence setup: JPA, an in-memory H2 `test` profile (the default), a PostgreSQL `postgres` profile, and an optional Docker Compose file for local PostgreSQL (see [Database](#database)).
 
 Still in progress:
 
-- Module A, C, and D implementations
-- B1 through B5 and B7 through B10: asset entity and repository, asset registration and lookup endpoints with validation, `AssetLookup`, the derivation conflict checker, freezing the schema into a Flyway migration on integration day, the JaCoCo coverage check, final README assembly, and Module B tests
-- E2 through E8: client registration, API-key authentication, client isolation, shared error mapping, the REST Assured harness, GitHub release setup, and Module E tests
+- Module A, C, and D implementations, on their own branches and not merged here
+- B1 through B5 and B7 through B10, on the Module B branch and not merged here
+- E4 cross-client 404 for policies, assets, edges, and decisions, once those endpoints are merged. Their lookups already take `clientId` on their own branches.
+- E7: branch protection, issue templates, and the Projects board are not set up on the repository. The release tag is not created yet.
 
-There is no security filter or controller yet.
+## Client registration
+
+`POST /api/clients` needs no API key and no body.
+
+```bash
+curl -i -X POST http://localhost:8080/api/clients
+```
+
+`201 Created`:
+
+```json
+{ "clientId": "generated-uuid", "apiKey": "shown-once" }
+```
+
+The database stores `clientId` and the SHA-256 hex digest of `apiKey`. A later request cannot read the raw key back. Send the key on later calls as `X-API-Key`. A request to any other path without that header returns `401` with `code` `MISSING_API_KEY`. A wrong key returns `401` with `code` `INVALID_API_KEY`. A `clientId` field in the registration body is ignored.
 
 ## Planned API
 
-These routes are specified for T2 and are **not implemented**. Every route will require an `X-API-Key` header except client registration.
+`POST /api/clients` is implemented. The other routes are specified for T2 and are **not implemented** on this branch. Every route except client registration requires an `X-API-Key` header.
 
-| Method | Route | Module | Planned success |
+| Method | Route | Module | Success |
 | --- | --- | --- | --- |
-| POST | `/api/clients` | E | 201, API key returned once |
+| POST | `/api/clients` | E | 201, API key returned once (implemented) |
 | POST | `/api/policies` | A | 201 |
 | GET | `/api/policies/{policyId}/versions` | A | 200 |
 | GET | `/api/policies/{policyId}/versions/{version}` | A | 200 |
@@ -201,7 +221,7 @@ Planned error body:
 }
 ```
 
-Planned status codes, not yet returned by the service:
+`401 MISSING_API_KEY` and `401 INVALID_API_KEY` are returned by the API-key filter. The other codes are mapped by `GlobalExceptionHandler` when a module throws the matching shared exception. Per-endpoint examples for Modules A–D will be added as those routes are merged:
 
 | Status | Codes |
 | --- | --- |
