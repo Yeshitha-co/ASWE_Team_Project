@@ -45,8 +45,7 @@ public class DecisionAuditEntity {
     private Instant evaluatedAt;
 
     /** Serialized JSON containing the complete evaluation result. */
-    @Lob
-    @Column(name = "result_json", nullable = false)
+    @Column(name = "result_json", nullable = false, columnDefinition = "text")
     private String resultJson;
 
     /**
