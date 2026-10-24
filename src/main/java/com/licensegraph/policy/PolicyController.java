@@ -13,6 +13,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * Handles HTTP requests for creating and retrieving license policies.
+ */
 @RestController
 @RequestMapping("/api/policies")
 public class PolicyController {
@@ -27,6 +30,12 @@ public class PolicyController {
         this.clientContext = clientContext;
     }
 
+    /**
+     * Creates a license policy for the current client.
+     *
+     * @param request the validated policy creation request
+     * @return the response representing the created policy
+     */
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public PolicyResponse createPolicy(
@@ -49,6 +58,12 @@ public class PolicyController {
         return PolicyResponse.from(saved);
     }
 
+    /**
+     * Retrieves all versions of a policy belonging to the current client.
+     *
+     * @param policyId the identifier of the policy
+     * @return the available versions of the policy
+     */
     @GetMapping("/{policyId}/versions")
     public List<PolicyResponse> findPolicyVersions(
             @PathVariable String policyId) {
@@ -61,6 +76,13 @@ public class PolicyController {
                 .toList();
     }
 
+    /**
+     * Retrieves a specific version of a policy belonging to the current client.
+     *
+     * @param policyId the identifier of the policy
+     * @param version the version number to retrieve
+     * @return the requested policy version
+     */
     @GetMapping("/{policyId}/versions/{version}")
     public PolicyResponse findPolicyVersion(
             @PathVariable String policyId,

@@ -5,6 +5,9 @@ import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Implements read-only lookup of license policies.
+ */
 @Service
 public class PolicyLookupImpl implements PolicyLookup {
 

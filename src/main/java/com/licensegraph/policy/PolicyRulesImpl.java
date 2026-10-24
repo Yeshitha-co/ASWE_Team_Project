@@ -4,9 +4,13 @@ package com.licensegraph.policy;
 import com.licensegraph.common.AssetRef;
 import com.licensegraph.common.IntendedUse;
 import com.licensegraph.common.Obligation;
-
 import java.util.List;
+import org.springframework.stereotype.Service;
 
+/**
+ * Evaluates policy permissions and calculates required obligations.
+ */
+@Service
 public class PolicyRulesImpl implements PolicyRules {
 
     @Override

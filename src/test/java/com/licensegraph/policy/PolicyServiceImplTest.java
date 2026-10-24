@@ -4,23 +4,23 @@ package com.licensegraph.policy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.licensegraph.common.PolicyRef;
 import com.licensegraph.common.exception.BadRequestException;
+import com.licensegraph.common.exception.ConflictException;
 import com.licensegraph.common.exception.ErrorCode;
+import com.licensegraph.common.exception.NotFoundException;
+import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import com.licensegraph.common.exception.ConflictException;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.never;
-import com.licensegraph.common.PolicyRef;
-import com.licensegraph.common.exception.NotFoundException;
-import java.util.Optional;
-import java.util.List;
 
 @ExtendWith(MockitoExtension.class)
 class PolicyServiceImplTest {
@@ -121,6 +121,9 @@ class PolicyServiceImplTest {
         assertEquals(404, exception.status());
     }
 
+    /**
+     * AI-assisted: Tests that finding policy versions returns them in ascending order.
+     */
     @Test
     void findPolicyVersionsReturnsVersionsInAscendingOrder() {
         LicensePolicy version1 = new LicensePolicy(
@@ -179,7 +182,10 @@ class PolicyServiceImplTest {
         assertEquals(2, result.getVersion());
     }
 
-
+    /**
+     * AI-assisted: Tests that creating a new version of a policy does
+     * not affect the previous version.
+     */
     @Test
     void creatingVersion2KeepsVersion1Readable() {
         LicensePolicy version1 = new LicensePolicy(

@@ -4,6 +4,9 @@ package com.licensegraph.policy;
 import com.licensegraph.common.PolicyRef;
 import java.util.List;
 
+/**
+ * Defines operations for creating and retrieving license policies.
+ */
 public interface PolicyService {
 
     LicensePolicy createPolicy(String clientId, LicensePolicy policy);

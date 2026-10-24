@@ -10,6 +10,9 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Implements license policy creation and retrieval operations.
+ */
 @Service
 @Transactional
 public class PolicyServiceImpl implements PolicyService {

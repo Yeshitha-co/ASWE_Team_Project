@@ -1,4 +1,3 @@
-
 package com.licensegraph.policy;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -13,12 +12,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.licensegraph.security.ClientContext;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(PolicyController.class)
+@AutoConfigureMockMvc(addFilters = false)
 class PolicyControllerTest {
 
     @Autowired
@@ -100,7 +101,6 @@ class PolicyControllerTest {
                 .andExpect(status().isBadRequest());
     }
 
-    /**
     @Test
     void createPolicyWithInvalidCombinationReturnsBadRequest()
             throws Exception {
@@ -136,5 +136,4 @@ class PolicyControllerTest {
                 org.mockito.ArgumentMatchers.eq("client-1"),
                 any(LicensePolicy.class));
     }
-    */
 }

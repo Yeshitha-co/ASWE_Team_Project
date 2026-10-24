@@ -1,20 +1,16 @@
-
 package com.licensegraph.policy;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
-import com.licensegraph.common.AssetRef;
-import com.licensegraph.common.Obligation;
-import com.licensegraph.common.ObligationType;
-import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.licensegraph.common.AssetRef;
 import com.licensegraph.common.IntendedUse;
+import com.licensegraph.common.Obligation;
+import com.licensegraph.common.ObligationType;
 import com.licensegraph.common.PolicyRef;
+import java.util.List;
 import org.junit.jupiter.api.Test;
-
 
 class PolicyRulesImplTest {
 
@@ -125,6 +121,10 @@ class PolicyRulesImplTest {
         assertTrue(result.isEmpty());
     }
 
+    /**
+     * AI-assisted: Tests that merging obligations removes duplicates
+     * but keeps different sources.
+     */
     @Test
     void mergeObligationsRemovesDuplicatesButKeepsDifferentSources() {
         PolicyRef policyRef = new PolicyRef("test-policy", 1);
@@ -155,24 +155,24 @@ class PolicyRulesImplTest {
                 new AssetRef("model-B", 1),
                 policyRef);
 
-        Obligation modelAVersion2 = new Obligation(
+        Obligation modelVersionTwo = new Obligation(
                 ObligationType.ATTRIBUTION,
                 new AssetRef("model-A", 2),
                 policyRef);
 
-        Obligation modelAShareAlike = new Obligation(
+        Obligation modelShareAlikeObligation = new Obligation(
                 ObligationType.SHARE_ALIKE,
                 new AssetRef("model-A", 1),
                 policyRef);
 
-        Obligation modelAAttribution = new Obligation(
+        Obligation modelAttributionObligation = new Obligation(
                 ObligationType.ATTRIBUTION,
                 new AssetRef("model-A", 1),
                 policyRef);
 
         List<Obligation> result = policyRules.mergeObligations(
-                List.of(modelB, modelAVersion2, modelAShareAlike,
-                        modelAAttribution));
+                List.of(modelB, modelVersionTwo, modelShareAlikeObligation,
+                        modelAttributionObligation));
 
         assertEquals(4, result.size());
 

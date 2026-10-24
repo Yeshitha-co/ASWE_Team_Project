@@ -9,6 +9,9 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 
+/**
+ * Represents a license policy and its permissions for a specific client and version.
+ */
 @Entity
 @Table(
         name = "license_policies",
@@ -52,10 +55,26 @@ public class LicensePolicy {
     @Column(name = "share_alike", nullable = false)
     private boolean shareAlike;
 
+    /**
+     * Creates an empty policy instance for JPA.
+     */
     protected LicensePolicy() {
         // Required by JPA.
     }
 
+    /**
+     * Creates a policy with its client, identifier, version, and permissions.
+     *
+     * @param clientId the owning client's identifier
+     * @param policyId the policy identifier
+     * @param version the policy version
+     * @param commercialUse whether commercial use is permitted
+     * @param redistribution whether redistribution is permitted
+     * @param derivatives whether derivative works are permitted
+     * @param aiTraining whether AI training is permitted
+     * @param attributionRequired whether attribution is required
+     * @param shareAlike whether derivative works must use the same license
+     */
     public LicensePolicy(
             String clientId,
             String policyId,

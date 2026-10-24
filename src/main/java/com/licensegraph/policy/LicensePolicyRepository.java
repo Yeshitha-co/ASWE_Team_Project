@@ -5,6 +5,9 @@ import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+/**
+ * AI-assisted: Provides database operations for client-specific license policies.
+ */
 public interface LicensePolicyRepository
         extends JpaRepository<LicensePolicy, Long> {
 
