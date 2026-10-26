@@ -83,6 +83,8 @@ mvn verify    # tests, then the JaCoCo coverage report and the coverage check
 
 `mvn verify` writes the coverage report to `target/site/jacoco/index.html` and fails the build if branch coverage across the project is below 55%. The report for the tagged release is committed with that release.
 
+API tests use REST Assured on top of Module E's `ApiTestBase`, which starts the application on a random port and registers a client with its own API key; for example, `AssetApiTest` covers every asset endpoint and error code over HTTP.
+
 `AssetPersistenceRestartTest` checks that data survives an application restart on the `postgres` profile. It runs only when `DB_URL` is set, so CI without PostgreSQL skips it. To run it, start PostgreSQL as described in [Run with PostgreSQL](#run-with-postgresql), set `DB_URL`, `DB_USER` and `DB_PASSWORD`, then:
 
 ```bash
@@ -153,15 +155,25 @@ psql -h localhost -U postgres -c "DROP DATABASE licensegraph;"
 psql -h localhost -U postgres -c "CREATE DATABASE licensegraph OWNER licensegraph;"
 ```
 
+### Schema
+
+The schema is in [`docs/schema.sql`](docs/schema.sql): the six tables, one per module (`license_policies`, `assets`, `derivation_edge` and `derivation_edge_conflict`, `decision_audit`, `api_clients`), with their keys and unique constraints. It is generated from the entities and documents the database; the application does not run it. It can also create an empty database by hand:
+
+```bash
+psql -h localhost -U licensegraph -d licensegraph -f docs/schema.sql
+```
+
+Versioned Flyway migrations are planned for Iteration 2. Flyway is already a dependency but is switched off.
+
 ### Adding tables (all modules)
 
-Until integration day (Oct 22), Hibernate builds the tables from the `@Entity` classes, so a module only writes its entity and repository, with no SQL:
+Hibernate builds the tables from the `@Entity` classes at startup, so a module only writes its entity and repository, with no SQL:
 
 - Put the entity anywhere under `com.licensegraph` and Spring finds it automatically.
 - Store the owning client in a `clientId` column and include it in every query, so another client's records return 404.
 - H2 uses `ddl-auto: create-drop` (clean tables on every run). PostgreSQL uses `ddl-auto: update` (adds missing tables and columns but never renames or removes them). After renaming or removing a field, reset your local database as shown above.
 
-On Oct 22 the schema is frozen: the SQL Hibernate generates is committed as a Flyway migration, and both profiles switch to Flyway with `ddl-auto: validate`. After that, every schema change is a new numbered migration file (for example `V2__add_column.sql`) in the same PR as the entity change. Flyway applies it on every database at startup.
+After changing an entity, regenerate `docs/schema.sql` in the same pull request so it stays accurate.
 
 ## Current status
 
@@ -177,12 +189,12 @@ Done:
 - B1 through B5: asset entity and client-scoped repository, `POST /api/assets` and `GET /api/assets/{assetId}/versions/{version}` with validation (`VALIDATION_ERROR`, `INVALID_ASSET_TYPE`, `DUPLICATE_ASSET_VERSION`, `UNKNOWN_POLICY_REFERENCE`, `ASSET_NOT_FOUND`), and the `AssetLookup` implementation, with unit tests.
 - B7: `DerivationConflictChecker`, which reports upstream `derivatives` and `aiTraining` conflicts for new derivations, with unit tests.
 - B8: JaCoCo coverage report and 55% branch-coverage check (see [Tests and coverage](#tests-and-coverage)).
+- B10: REST Assured API tests for the asset endpoints (`AssetApiTest`): a success case, every error code, cross-client 404, and upstream conflicts reported through `POST /api/derivations`.
+- Schema documented in [`docs/schema.sql`](docs/schema.sql).
 
 Still in progress:
 
-- B6 follow-up: freeze the schema into a Flyway migration once every module's entities are on `main`
 - B9: assemble the README sections from every module (due Oct 23)
-- B10: REST Assured API tests for the asset endpoints, using the shared harness (E6)
 - E4 cross-client 404 for policies, assets, edges, and decisions, once those endpoints are merged. Their lookups already take `clientId` on their own branches.
 - E7: branch protection, issue templates, and the Projects board are not set up on the repository. The release tag is not created yet.
 
@@ -408,7 +420,7 @@ LicenseGraph does not copy any third-party source code into the repository. It u
 | Jackson 2.18 | JSON serialization of requests and responses | Apache 2.0 |
 | H2 Database 2.3.232 | In-memory database for the `test` profile | MPL 2.0 or EPL 1.0 |
 | PostgreSQL JDBC Driver 42.7.5 | Connecting to PostgreSQL in the `postgres` profile | BSD 2-Clause |
-| Flyway 10.20 | Schema migrations (switched on once the schema is frozen) | Apache 2.0 |
+| Flyway 10.20 | Schema migrations, planned for Iteration 2 (dependency present, switched off) | Apache 2.0 |
 | JUnit 5.11 | Unit and integration tests | EPL 2.0 |
 | Mockito 5.14 | Test doubles for other modules' interfaces | MIT |
 | AssertJ 3.26 | Test assertions | Apache 2.0 |
