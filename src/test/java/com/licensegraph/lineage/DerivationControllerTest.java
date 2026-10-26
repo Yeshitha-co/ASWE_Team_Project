@@ -31,7 +31,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 /**
- * Tests the Module C REST layer with the services mocked: status codes, request validation,
+ * AI-assisted: Tests the Module C REST layer with the services mocked: status codes, request
+ * validation,
  * response shape, and that the client id comes from ClientContext (C2, C7, C9).
  */
 @WebMvcTest(DerivationController.class)

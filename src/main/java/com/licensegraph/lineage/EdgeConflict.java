@@ -7,7 +7,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
 
 /**
- * One upstream policy conflict stored on a derivation edge (C1, C5).
+ * AI-assisted: One upstream policy conflict stored on a derivation edge (C1, C5).
  *
  * <p>Conflicts are reported and kept for history. They never block a derivation.
  */

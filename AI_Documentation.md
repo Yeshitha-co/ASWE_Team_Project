@@ -61,5 +61,6 @@ Token usage for both tools is recorded below for the project development period.
 ### Usage by team member
 
 | Team member | Module | AI tool | Token usage |
-|---|---|---|---|
-| Abhishek Saxena | B. Asset Registry, Persistence and Conflict Checks | Claude | ~217K |
+|---|---|---|-------------|
+| Abhishek Saxena | B. Asset Registry, Persistence and Conflict Checks | Claude | ~217K       |
+| Srishti Singh | C. Lineage Graph Engine | Claude | ~515k       |

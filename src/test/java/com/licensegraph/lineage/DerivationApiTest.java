@@ -10,7 +10,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 /**
- * REST Assured API tests for the Module C endpoints over HTTP.
+ * AI-assisted: REST Assured API tests for the Module C endpoints over HTTP.
  *
  * <p>Uses Module E's {@link ApiTestBase}, which starts the application on a random port and
  * registers a fresh client before each test. Policies and assets are registered through Modules

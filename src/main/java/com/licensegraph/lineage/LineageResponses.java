@@ -8,7 +8,8 @@ import com.licensegraph.common.RelationType;
 import java.util.List;
 
 /**
- * Response bodies for Module C endpoints. Assets and policies are printed as "model-C:v1"
+ * AI-assisted: Response bodies for Module C endpoints. Assets and policies are printed as
+ * "model-C:v1"
  * and "license-A:v1", following the Section 10 naming convention.
  */
 public final class LineageResponses {

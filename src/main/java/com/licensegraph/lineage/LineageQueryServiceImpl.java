@@ -16,7 +16,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Answers ancestry and descendant queries by breadth-first search over stored edges (C6).
+ * AI-assisted: Answers ancestry and descendant queries by breadth-first search over stored edges
+ * (C6).
  *
  * <p>Each asset is visited once, so a shared ancestor in a diamond appears once in the result.
  * Every lookup is scoped to the caller's client.

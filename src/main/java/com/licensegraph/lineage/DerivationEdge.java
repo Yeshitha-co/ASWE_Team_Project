@@ -23,7 +23,8 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * One stored derivation edge, directed from input to output and owned by one client (C1).
+ * AI-assisted: One stored derivation edge, directed from input to output and owned by one client
+ * (C1).
  *
  * <p>Edges are insert-only: there are no setters, and the only change after construction is
  * attaching the conflicts found for this edge inside the same transaction.

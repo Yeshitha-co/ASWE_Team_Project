@@ -16,7 +16,8 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * REST endpoints for Module C: record a derivation, and read ancestors or descendants (C2, C7).
+ * AI-assisted: REST endpoints for Module C: record a derivation, and read ancestors or descendants
+ * (C2, C7).
  * The caller's client id always comes from {@link ClientContext}, never from the request body.
  */
 @RestController

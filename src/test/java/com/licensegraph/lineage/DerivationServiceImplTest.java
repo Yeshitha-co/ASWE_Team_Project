@@ -50,7 +50,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * Tests recording derivations: validation, cycle and duplicate rejection, rollback, stored
+ * AI-assisted: Tests recording derivations: validation, cycle and duplicate rejection, rollback,
+ * stored
  * conflicts, client isolation and concurrent requests (C9). Each test commits for real so the
  * concurrency test sees what other threads wrote; tables are cleared after every test.
  */
