@@ -3,17 +3,23 @@ package com.licensegraph.decision;
 
 import com.licensegraph.asset.AssetLookup;
 import com.licensegraph.asset.AssetView;
-import com.licensegraph.common.*;
+import com.licensegraph.common.AssetRef;
+import com.licensegraph.common.Decision;
+import com.licensegraph.common.IntendedUse;
+import com.licensegraph.common.LineageGraph;
+import com.licensegraph.common.Obligation;
+import com.licensegraph.common.PolicyRef;
 import com.licensegraph.common.exception.NotFoundException;
 import com.licensegraph.lineage.LineageQueryService;
 import com.licensegraph.policy.PolicyLookup;
 import com.licensegraph.policy.PolicyRules;
 import com.licensegraph.policy.PolicyView;
 import com.licensegraph.policy.RuleOutcome;
-
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import org.springframework.stereotype.Service;
-
-import java.util.*;
 
 /**
  * Implements lineage-aware use decision evaluation for Module D.

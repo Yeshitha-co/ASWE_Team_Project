@@ -1,14 +1,13 @@
-
 package com.licensegraph.decision;
 
 import com.licensegraph.common.AssetRef;
+import com.licensegraph.common.IntendedUse;
+import com.licensegraph.common.exception.ApiException;
+import com.licensegraph.common.exception.ErrorCode;
 import com.licensegraph.common.exception.NotFoundException;
 import com.licensegraph.security.ClientContext;
-
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
-
+import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -18,8 +17,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.List;
 
 /**
  * REST controller exposing Module D's use decision and audit history APIs.
@@ -32,7 +29,6 @@ import java.util.List;
  * identifier is obtained from {@link ClientContext}, which is populated
  * by Module E's authentication mechanism. Client identifiers supplied
  * by HTTP callers are not trusted.
- *
  */
 @RestController
 @RequestMapping("/api/use-decisions")
@@ -73,7 +69,6 @@ public class UseDecisionController {
      * @param request validated asset version and intended use
      * @return newly recorded use decision
      */
-
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public UseDecisionResponse createDecision(
@@ -85,10 +80,20 @@ public class UseDecisionController {
                 request.assetId(),
                 request.version());
 
+        IntendedUse intendedUse;
+
+        try {
+            intendedUse = IntendedUse.fromJson(request.intendedUse());
+        } catch (IllegalArgumentException exception) {
+            throw new ApiException(
+                    ErrorCode.INVALID_INTENDED_USE,
+                    "Invalid intended use: " + request.intendedUse());
+        }
+
         UseDecisionRecord record = useDecisionService.decideAndRecord(
                 clientId,
                 target,
-                request.intendedUse());
+                intendedUse);
 
         return UseDecisionResponse.from(record);
     }
@@ -109,7 +114,6 @@ public class UseDecisionController {
      * @return matching decision audit record
      * @throws NotFoundException if no matching client-scoped decision exists
      */
-
     @GetMapping("/{decisionId}")
     public UseDecisionResponse getDecision(
             @PathVariable String decisionId) {
@@ -121,7 +125,6 @@ public class UseDecisionController {
 
         return UseDecisionResponse.from(record);
     }
-
 
     /**
      * Retrieves saved decision history for an asset version.
@@ -136,11 +139,22 @@ public class UseDecisionController {
      * @param version version of the evaluated asset
      * @return saved decisions matching the requested asset version
      */
-
     @GetMapping
     public List<UseDecisionResponse> getDecisionHistory(
-            @RequestParam @NotBlank String assetId,
-            @RequestParam @Min(1) int version) {
+            @RequestParam(required = false) String assetId,
+            @RequestParam(required = false) Integer version) {
+
+        if (assetId == null || assetId.isBlank()) {
+            throw new ApiException(
+                    ErrorCode.VALIDATION_ERROR,
+                    "assetId must not be blank");
+        }
+
+        if (version == null || version < 1) {
+            throw new ApiException(
+                    ErrorCode.VALIDATION_ERROR,
+                    "version must be a positive integer");
+        }
 
         String clientId = clientContext.currentClientId();
         AssetRef target = new AssetRef(assetId, version);

@@ -1,11 +1,7 @@
-
 package com.licensegraph.decision;
-
-import com.licensegraph.common.IntendedUse;
 
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 
 /**
  * Request body for creating a new use decision.
@@ -19,7 +15,6 @@ import jakarta.validation.constraints.NotNull;
  * <p>The authenticated client identifier is intentionally excluded
  * from this request. It is obtained through ClientContext instead.
  *
- *
  * @param assetId non-blank identifier of the target asset
  * @param version positive version number of the target asset
  * @param intendedUse intended use to evaluate
@@ -27,6 +22,6 @@ import jakarta.validation.constraints.NotNull;
 public record CreateUseDecisionRequest(
         @NotBlank String assetId,
         @Min(1) int version,
-        @NotNull IntendedUse intendedUse
+        @NotBlank String intendedUse
 ) {
 }

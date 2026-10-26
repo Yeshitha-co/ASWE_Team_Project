@@ -5,8 +5,12 @@ import com.licensegraph.common.AssetRef;
 import com.licensegraph.common.LineageEdge;
 import com.licensegraph.common.LineageGraph;
 import com.licensegraph.common.PolicyRef;
-
-import java.util.*;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Queue;
+import java.util.Set;
 
 /**
  * Constructs an explanation path for a policy that blocks an intended use.

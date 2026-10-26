@@ -3,19 +3,15 @@ package com.licensegraph.decision.persistence;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 import com.licensegraph.common.AssetRef;
 import com.licensegraph.decision.DecisionAuditStore;
 import com.licensegraph.decision.UseDecisionRecord;
 import com.licensegraph.decision.UseDecisionResult;
-
-import org.springframework.stereotype.Repository;
-
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-
+import org.springframework.stereotype.Repository;
 /**
  * JPA-backed implementation of the decision audit store for Module D.
  *
@@ -29,6 +25,7 @@ import java.util.UUID;
  * to prevent access to another client's decision history.
  *
  */
+
 @Repository
 public class JpaDecisionAuditStore implements DecisionAuditStore {
 
