@@ -1,6 +1,7 @@
 
 package com.licensegraph.decision;
 
+import com.licensegraph.asset.AssetLookup;
 import com.licensegraph.common.AssetRef;
 import com.licensegraph.common.IntendedUse;
 import com.licensegraph.common.exception.BadRequestException;
@@ -33,9 +34,8 @@ import org.springframework.web.bind.annotation.RestController;
  * by HTTP callers are not trusted.
  *
  * <p>AI-assisted: AI assistance was used to refine intended-use
- * validation, integrate shared exception handling, improve controller
- * tests, and resolve Checkstyle warnings.
- *
+ * validation, integrate shared exception handling, implement
+ * client-scoped decision-history checks, and resolve Checkstyle warnings.
  */
 @RestController
 @RequestMapping("/api/use-decisions")
@@ -43,6 +43,7 @@ public class UseDecisionController {
 
     private final UseDecisionService useDecisionService;
     private final DecisionAuditStore decisionAuditStore;
+    private final AssetLookup assetLookup;
     private final ClientContext clientContext;
 
     /**
@@ -50,15 +51,18 @@ public class UseDecisionController {
      *
      * @param useDecisionService evaluates and records requested uses
      * @param decisionAuditStore retrieves previously recorded decisions
+     * @param assetLookup provides client-scoped asset lookups
      * @param clientContext provides the authenticated client identifier
      */
     public UseDecisionController(
             UseDecisionService useDecisionService,
             DecisionAuditStore decisionAuditStore,
+            AssetLookup assetLookup,
             ClientContext clientContext) {
 
         this.useDecisionService = useDecisionService;
         this.decisionAuditStore = decisionAuditStore;
+        this.assetLookup = assetLookup;
         this.clientContext = clientContext;
     }
 
@@ -76,7 +80,6 @@ public class UseDecisionController {
      * @param request validated asset version and intended use
      * @return newly recorded use decision
      */
-
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public UseDecisionResponse createDecision(
@@ -112,7 +115,6 @@ public class UseDecisionController {
      * @return matching decision audit record
      * @throws NotFoundException if no matching client-scoped decision exists
      */
-
     @GetMapping("/{decisionId}")
     public UseDecisionResponse getDecision(
             @PathVariable String decisionId) {
@@ -125,36 +127,46 @@ public class UseDecisionController {
         return UseDecisionResponse.from(record);
     }
 
-
     /**
      * Retrieves saved decision history for an asset version.
      *
      * <p>Endpoint: GET /api/use-decisions?assetId=...&version=...
      *
-     * <p>Returns audit records matching the authenticated client,
-     * asset identifier, and version. This operation does not perform
-     * a new evaluation or create an audit record.
+     * <p>Only returns decision history for assets accessible to the
+     * authenticated client. Requests for another client's asset
+     * return 404 DECISION_NOT_FOUND.
+     *
+     * <p>An accessible asset without recorded decisions returns
+     * an empty list.
      *
      * @param assetId identifier of the evaluated asset
      * @param version version of the evaluated asset
      * @return saved decisions matching the requested asset version
      */
-
     @GetMapping
     public List<UseDecisionResponse> getDecisionHistory(
             @RequestParam(required = false) String assetId,
             @RequestParam(required = false) Integer version) {
 
-        // Checked here so a missing or non-positive parameter is a 400, not a 500.
+        // Validate request parameters before performing any database lookups.
         if (assetId == null || assetId.isBlank()) {
             throw validationError("assetId is required", "assetId");
         }
+
         if (version == null || version < 1) {
             throw validationError("version must be a positive integer", "version");
         }
 
         String clientId = clientContext.currentClientId();
         AssetRef target = new AssetRef(assetId, version);
+
+        // AI-assisted: Enforce client isolation for decision-history access.
+        // A missing or inaccessible target must not return 200 with an empty list.
+        if (assetLookup.findAsset(clientId, target).isEmpty()) {
+            throw new NotFoundException(
+                    ErrorCode.DECISION_NOT_FOUND,
+                    "Decision history not found for asset: " + target);
+        }
 
         return decisionAuditStore.findByTarget(clientId, target)
                 .stream()
@@ -173,7 +185,8 @@ public class UseDecisionController {
         try {
             return IntendedUse.fromJson(value);
         } catch (IllegalArgumentException ex) {
-            throw new BadRequestException(ErrorCode.INVALID_INTENDED_USE,
+            throw new BadRequestException(
+                    ErrorCode.INVALID_INTENDED_USE,
                     "Unknown intended use: " + value
                             + " (expected commercial, redistribution, derivative, ai-training"
                             + " or internal)",
@@ -181,7 +194,19 @@ public class UseDecisionController {
         }
     }
 
-    private static BadRequestException validationError(String message, String field) {
-        return new BadRequestException(ErrorCode.VALIDATION_ERROR, message, Map.of("field", field));
+    /**
+     * Creates a shared validation error for an invalid request parameter.
+     *
+     * @param message explanation of the validation failure
+     * @param field name of the invalid request field
+     * @return validation exception with field details
+     */
+    private static BadRequestException validationError(
+            String message, String field) {
+
+        return new BadRequestException(
+                ErrorCode.VALIDATION_ERROR,
+                message,
+                Map.of("field", field));
     }
 }

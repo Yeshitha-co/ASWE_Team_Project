@@ -12,6 +12,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.licensegraph.asset.AssetLookup;
+import com.licensegraph.asset.AssetView;
 import com.licensegraph.common.AssetRef;
 import com.licensegraph.common.Decision;
 import com.licensegraph.common.IntendedUse;
@@ -27,7 +29,6 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-
 /**
  * Tests the Module D use-decision REST controller.
  */
@@ -36,6 +37,7 @@ class UseDecisionControllerTest {
     private MockMvc mockMvc;
     private UseDecisionService useDecisionService;
     private DecisionAuditStore decisionAuditStore;
+    private AssetLookup assetLookup;
     private ClientContext clientContext;
 
     @BeforeEach
@@ -43,11 +45,13 @@ class UseDecisionControllerTest {
 
         useDecisionService = mock(UseDecisionService.class);
         decisionAuditStore = mock(DecisionAuditStore.class);
+        assetLookup = mock(AssetLookup.class);
         clientContext = mock(ClientContext.class);
 
         UseDecisionController controller = new UseDecisionController(
                 useDecisionService,
                 decisionAuditStore,
+                assetLookup,
                 clientContext
         );
 
@@ -153,6 +157,9 @@ class UseDecisionControllerTest {
     void shouldRetrieveDecisionHistory() throws Exception {
 
         AssetRef target = new AssetRef("Model-C", 1);
+        AssetView assetView = mock(AssetView.class);
+        when(assetLookup.findAsset("client-1", target))
+                .thenReturn(Optional.of(assetView));
 
         UseDecisionResult result = new UseDecisionResult(
                 target,
@@ -398,5 +405,44 @@ class UseDecisionControllerTest {
                 .andExpect(jsonPath("$.details.field").value("assetId"));
 
         verifyNoInteractions(decisionAuditStore);
+    }
+
+    /**
+     * AI-assisted: Another client's decision history must return 404.
+     */
+    @Test
+    void shouldRejectAnotherClientsDecisionHistory() throws Exception {
+        AssetRef target = new AssetRef("Model-C", 1);
+        when(clientContext.currentClientId()).thenReturn("client-2");
+        when(assetLookup.findAsset("client-2", target)).thenReturn(Optional.empty());
+
+        mockMvc.perform(get("/api/use-decisions")
+                        .param("assetId", "Model-C")
+                        .param("version", "1"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("DECISION_NOT_FOUND"));
+
+        verify(assetLookup).findAsset("client-2", target);
+        verifyNoInteractions(decisionAuditStore);
+    }
+
+    /**
+     * AI-assisted: An accessible asset without decisions returns an empty history.
+     */
+    @Test
+    void shouldReturnEmptyHistoryForOwnedAsset() throws Exception {
+        AssetRef target = new AssetRef("Model-C", 1);
+        when(assetLookup.findAsset("client-1", target))
+                .thenReturn(Optional.of(mock(AssetView.class)));
+        when(decisionAuditStore.findByTarget("client-1", target))
+                .thenReturn(List.of());
+
+        mockMvc.perform(get("/api/use-decisions")
+                        .param("assetId", "Model-C")
+                        .param("version", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isEmpty());
+
+        verify(decisionAuditStore).findByTarget("client-1", target);
     }
 }
