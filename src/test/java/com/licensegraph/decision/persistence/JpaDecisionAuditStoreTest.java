@@ -1,22 +1,27 @@
 
 package com.licensegraph.decision.persistence;
 
-import com.licensegraph.common.*;
-import com.licensegraph.decision.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.licensegraph.common.AssetRef;
+import com.licensegraph.common.Decision;
+import com.licensegraph.common.IntendedUse;
+import com.licensegraph.common.PolicyRef;
+import com.licensegraph.decision.DecisionAuditStore;
+import com.licensegraph.decision.UseDecisionRecord;
+import com.licensegraph.decision.UseDecisionResult;
+import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.context.annotation.Import;
-import org.springframework.test.context.ActiveProfiles;
-
-import java.util.List;
-import java.util.Optional;
-
-import static org.junit.jupiter.api.Assertions.*;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
+import org.springframework.test.context.ActiveProfiles;
 
 @DataJpaTest
 @ActiveProfiles("test")

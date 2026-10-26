@@ -61,6 +61,9 @@ Token usage for both tools is recorded below for the project development period.
 ### Usage by team member
 
 | Team member | Module | AI tool | Token usage |
-|---|---|---|-------------|
-| Abhishek Saxena | B. Asset Registry, Persistence and Conflict Checks | Claude | ~217K       |
+|---|---|---|---|
+| Abhishek Saxena | B. Asset Registry, Persistence and Conflict Checks | Claude | ~217K |
+| Progga Paromita Dutta | D. Use Decisions and Audit Log | ChatGPT (OpenAI) | ~200K |
 | Srishti Singh | C. Lineage Graph Engine | Claude | ~515k       |
+| Yeshitha Bhuvanesh | A.  Policy Registry and Use Rules | ChatGPT (OpenAI) | ~210K |
+

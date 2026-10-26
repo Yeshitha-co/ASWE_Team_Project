@@ -1,13 +1,11 @@
-
 package com.licensegraph.decision;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.licensegraph.common.Decision;
 import com.licensegraph.policy.RuleOutcome;
-import org.junit.jupiter.api.Test;
-
 import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import org.junit.jupiter.api.Test;
 
 class PolicyEvaluationTest {
 
