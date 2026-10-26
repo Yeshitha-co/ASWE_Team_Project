@@ -91,6 +91,15 @@ API tests use REST Assured on top of Module E's `ApiTestBase`, which starts the 
 mvn test -Dtest=AssetPersistenceRestartTest
 ```
 
+## Style checks
+
+Checkstyle runs through the Maven Checkstyle Plugin 3.6.0 with the ruleset in `config/checkstyle/checkstyle.xml`: Google Java Style, adapted to this project's 4-space indentation, with a 100-character line limit. It checks production and test code. Violations are reported as warnings and do not fail the build.
+
+```bash
+mvn checkstyle:check        # print violations to the console
+mvn checkstyle:checkstyle   # HTML report in target/reports/checkstyle.html, XML in target/checkstyle-result.xml
+```
+
 ## Database
 
 The service runs on one of two databases, chosen by Spring profile:
@@ -237,9 +246,167 @@ Policies, assets, edges, and decisions are insert-only. Another client’s recor
 
 ## API documentation
 
-Each module documents its endpoints below: inputs, outputs, side effects, status and error codes, call order, and correct and bad-usage examples. Sections for Modules A, C, D and E are added as their owners hand them over (due Oct 23).
+Each module documents its endpoints below: inputs, outputs, side effects, status and error codes, call order, and correct and bad-usage examples. Client registration (Module E) is described in [Client registration](#client-registration). Sections for Modules C and D are added as their owners hand them over.
 
 The usual call order for a client is: register (`POST /api/clients`), register policies, register assets that point to those policies, record derivations between assets, then check intended use.
+
+### Module A: Policies
+
+Stores versioned license policies and decides what one policy allows. Every policy belongs to the client that registered it, and the pair (`policyId`, `version`) is unique per client: a new version never overwrites an earlier one, so decisions stay tied to the terms in force when they were made. Other modules read policies only through `PolicyLookup` and `PolicyRules`, never the database.
+
+#### `POST /api/policies`
+
+Registers a new policy version for the caller.
+
+**Call order:** first, before any asset that uses the policy. Assets name an exact policy version (`POST /api/assets`).
+
+**Request body.** Every field is required.
+
+| Field | Rules |
+| --- | --- |
+| `policyId` | letters, digits, `.`, `_`, `-` |
+| `version` | integer, at least 1 |
+| `commercialUse` | `true` or `false`: may the asset be used commercially |
+| `redistribution` | `true` or `false`: may the asset be redistributed |
+| `derivatives` | `true` or `false`: may derivative works be made |
+| `aiTraining` | `true` or `false`: may the asset be used as AI training data |
+| `attributionRequired` | `true` or `false`: does use require attribution |
+| `shareAlike` | `true` or `false`: must derivatives carry the same terms; needs `derivatives: true` |
+
+The owning client comes from the API key.
+
+**Side effects:** stores one new policy version. Policies cannot be edited or deleted.
+
+**Success:** `201 Created` with the stored policy.
+
+```http
+POST /api/policies
+X-API-Key: <your key>
+Content-Type: application/json
+
+{ "policyId": "license-A", "version": 1, "commercialUse": false, "redistribution": true,
+  "derivatives": true, "aiTraining": true, "attributionRequired": true, "shareAlike": false }
+```
+
+```json
+{
+  "policyId": "license-A",
+  "version": 1,
+  "commercialUse": false,
+  "redistribution": true,
+  "derivatives": true,
+  "aiTraining": true,
+  "attributionRequired": true,
+  "shareAlike": false
+}
+```
+
+**Errors**
+
+| Status | Code | When |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | a field is missing, `policyId` has characters outside the allowed set, or `version` is below 1; the message names each field |
+| 400 | `INVALID_POLICY_COMBINATION` | `shareAlike` is `true` but `derivatives` is `false` |
+| 409 | `DUPLICATE_POLICY_VERSION` | the caller already registered this `policyId` and `version` |
+
+**Bad usage:** share-alike without derivatives.
+
+```json
+{
+  "timestamp": "2026-10-26T16:27:58Z",
+  "status": 400,
+  "code": "INVALID_POLICY_COMBINATION",
+  "message": "A policy requiring share-alike must allow derivatives",
+  "path": "/api/policies"
+}
+```
+
+**Bad usage:** registering the same version twice.
+
+```json
+{
+  "timestamp": "2026-10-26T16:27:57Z",
+  "status": 409,
+  "code": "DUPLICATE_POLICY_VERSION",
+  "message": "Policy version already exists: license-A:v1",
+  "path": "/api/policies"
+}
+```
+
+#### `GET /api/policies/{policyId}/versions`
+
+Lists every version of one of the caller's policies, oldest first.
+
+**Side effects:** none.
+
+**Success:** `200 OK` with an array of policies in the same shape as registration.
+
+```http
+GET /api/policies/license-A/versions
+X-API-Key: <your key>
+```
+
+**Errors**
+
+| Status | Code | When |
+| --- | --- | --- |
+| 404 | `POLICY_NOT_FOUND` | the caller has no policy with this id (including another client's policy) |
+
+#### `GET /api/policies/{policyId}/versions/{version}`
+
+Reads one version of one of the caller's policies.
+
+**Side effects:** none.
+
+**Success:** `200 OK` with the policy.
+
+**Errors**
+
+| Status | Code | When |
+| --- | --- | --- |
+| 404 | `POLICY_NOT_FOUND` | the version does not exist or belongs to another client |
+
+**Bad usage:** reading a version that was never registered.
+
+```json
+{
+  "timestamp": "2026-10-26T16:27:58Z",
+  "status": 404,
+  "code": "POLICY_NOT_FOUND",
+  "message": "Policy not found: license-A:v9",
+  "path": "/api/policies/license-A/versions/9"
+}
+```
+
+#### Use rules and obligations
+
+`PolicyRules` decides what one policy allows. Module D applies it to the requested asset and every ancestor. Each intended use maps to one policy field:
+
+| Intended use | Field checked |
+| --- | --- |
+| `commercial` | `commercialUse` |
+| `redistribution` | `redistribution` |
+| `derivative` | `derivatives` |
+| `ai-training` | `aiTraining` |
+| `internal` | none, always allowed |
+
+A check returns whether the use is allowed and, when it is not, the blocking field (for example `commercialUse`).
+
+Policies also add obligations, which never change ALLOW or DENY:
+
+- **attribution**, when `attributionRequired` is `true`
+- **share-alike**, when `shareAlike` is `true`
+
+Each obligation names its type, the asset it comes from and that asset's policy version. When obligations from several assets are merged, each type is kept once per source asset, sorted by asset and then type.
+
+#### Interfaces for other modules
+
+| Interface | Used by | Purpose |
+| --- | --- | --- |
+| `PolicyLookup.findPolicy(clientId, ref)` | B, D | the policy version's fields, or empty if it is missing or another client's |
+| `PolicyRules.check(policy, use)` | D | allowed or blocked for one intended use, with the blocking field |
+| `PolicyRules.obligations(source, policy)` | D | the obligations one policy adds for one asset |
+| `PolicyRules.mergeObligations(all)` | D | obligations from many assets, without duplicates and in a fixed order |
 
 ### Module B: Assets
 
@@ -313,8 +480,7 @@ Another client may register an asset with the same id and version; each client o
   "status": 409,
   "code": "DUPLICATE_ASSET_VERSION",
   "message": "Asset version already exists: dataset-A:v1",
-  "path": "/api/assets",
-  "details": {}
+  "path": "/api/assets"
 }
 ```
 
@@ -326,8 +492,7 @@ Another client may register an asset with the same id and version; each client o
   "status": 422,
   "code": "UNKNOWN_POLICY_REFERENCE",
   "message": "Unknown policy reference: license-A:v9",
-  "path": "/api/assets",
-  "details": {}
+  "path": "/api/assets"
 }
 ```
 
@@ -360,8 +525,7 @@ Another client's asset returns 404, never 403, so clients cannot tell whether so
   "status": 404,
   "code": "ASSET_NOT_FOUND",
   "message": "Asset not found: dataset-A:v2",
-  "path": "/api/assets/dataset-A/versions/2",
-  "details": {}
+  "path": "/api/assets/dataset-A/versions/2"
 }
 ```
 
@@ -386,16 +550,16 @@ Example: if `license-A:v1` had `derivatives=false`, recording Model-B as trained
 | `AssetLookup.findAssetsByPolicy(clientId, policy)` | Iteration 2 impact analysis | every asset version of the caller linked to an exact policy version |
 | `DerivationConflictChecker.check(clientId, inputs, upstreamByInput)` | C | upstream policy conflicts for a new derivation |
 
-Planned error body:
+Every error uses the same body. `details` is included only when there is something to add, such as the field that failed validation or the path of a cycle:
 
 ```json
 {
-  "timestamp": "2026-10-21T14:03:11Z",
+  "timestamp": "2026-10-23T17:12:30Z",
   "status": 409,
   "code": "CYCLE_DETECTED",
-  "message": "Edge dataset-A:v1 -> model-C:v1 would create a cycle",
+  "message": "Edge model-B:v1 -> dataset-A:v1 would create a cycle",
   "path": "/api/derivations",
-  "details": {}
+  "details": { "cyclePath": ["dataset-A:v1", "model-C:v1", "model-B:v1", "dataset-A:v1"] }
 }
 ```
 
@@ -425,7 +589,8 @@ LicenseGraph does not copy any third-party source code into the repository. It u
 | Mockito 5.14 | Test doubles for other modules' interfaces | MIT |
 | AssertJ 3.26 | Test assertions | Apache 2.0 |
 | JaCoCo 0.8.15 | Test coverage report and branch-coverage check | EPL 2.0 |
+| Spring Security 6.4.5 | API-key authentication filter | Apache 2.0 |
+| REST Assured 5.5.1 | API tests over HTTP | Apache 2.0 |
+| Checkstyle 9.3 (Maven Checkstyle Plugin 3.6.0) | Style checks | LGPL 2.1 |
 
-Libraries added by other modules (for example REST Assured for API tests and Checkstyle for style checks) are listed here as they are merged.
-
-Code written with AI assistance is marked in comments in the source files, as required by the team's AI policy.
+Code written with AI assistance is marked with an `AI-assisted:` comment in the source files, as described in [`AI_Documentation.md`](AI_Documentation.md).
