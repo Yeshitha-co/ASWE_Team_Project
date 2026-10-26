@@ -25,8 +25,8 @@ import org.springframework.test.web.servlet.MockMvc;
  * AI-assisted: Web-layer tests for {@link AssetController}: routes, status codes, JSON shape, and
  * that the client always comes from {@link ClientContext} (Module B, tasks B2 and B4).
  *
- * <p>Error responses are produced by Module E's exception handler and are covered by the API
- * tests once it exists; {@link AssetServiceTest} checks which exception each error raises.
+ * <p>Error responses are produced by Module E's exception handler and are covered over HTTP by
+ * {@link AssetApiTest}; {@link AssetServiceTest} checks which exception each error raises.
  *
  * <p>The API-key filter is switched off here ({@code addFilters = false}) because
  * {@link ClientContext} is mocked; authentication is tested by Module E.
