@@ -6,7 +6,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Registers a client and returns its API key once (E2).
+ * AI-assisted: Key generation, hashing, and client registration.
+ *
+ * <p>Registers a client and returns its API key once (E2).
  */
 @Service
 public class ClientRegistrationService {

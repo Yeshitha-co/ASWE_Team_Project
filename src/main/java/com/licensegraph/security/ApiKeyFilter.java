@@ -10,7 +10,9 @@ import org.springframework.http.HttpMethod;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
- * Requires {@code X-API-Key} on every route except {@code POST /api/clients} (E3).
+ * AI-assisted: API-key authentication.
+ *
+ * <p>Requires {@code X-API-Key} on every route except {@code POST /api/clients} (E3).
  */
 public class ApiKeyFilter extends OncePerRequestFilter {
 

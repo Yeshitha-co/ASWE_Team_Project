@@ -2,13 +2,13 @@
 
 ## 1. Overview
 
-This document describes the use of AI tools during the development of LicenseGraph. It records the tools used, their purposes, representative prompts, how AI-assisted code is identified, and the associated token usage.
+This document describes how AI tools were used during the development of LicenseGraph. It records the tools used, their purposes, representative prompts, how we identify AI-assisted code, and the associated token usage.
 
-AI tools were used to support development and problem-solving. The team made implementation decisions, reviewed AI suggestions, and remains responsible for the final implementation.
+The team used AI tools to support development and problem-solving. The team made implementation decisions, reviewed AI suggestions, and remains responsible for the final implementation.
 
 ## 2. AI Tools Used
 
-The team used **ChatGPT and Claude** as programming assistants during development.
+The team used **ChatGPT and Claude** as programming assistants during development. 
 
 Their use included:
 
@@ -36,6 +36,12 @@ The following examples illustrate the types of prompts used during development. 
 - "Explain the trade-offs between these implementation approaches and how they affect the other modules."
 - "What edge cases should be considered when implementing this functionality?"
 
+These are requests actually given for Module E. They are not a full transcript.
+
+- Implement Module E from the work plan: register a client at `POST /api/clients` with a random API key whose SHA-256 hash is the only stored secret, require `X-API-Key` everywhere else, and map shared exceptions to the Section 10 error body.
+- Add a REST Assured base that registers a caller, then cross-client tests: another client's policy, asset, edge, or decision is 404, a body that names something outside the caller is 422, and a missing or unknown key is 401.
+- Fix the remaining Module E Checkstyle violations, including tests, without changing behavior and without reformatting Modules A–D.
+
 ## 4. Identification of AI-Assisted Code
 
 AI-generated or AI-assisted code, including test code, is identified in the relevant source files using comments such as:
@@ -50,13 +56,13 @@ This marker is used for code generated or materially assisted by an AI tool, inc
 
 ## 5. Token Usage
 
-Token usage for both tools is recorded below for the project development period.
+The table below records token usage for both tools during the project development period.
 
 | AI tool | Total token usage |
 |---|---|
-| ChatGPT | TBC |
-| Claude | TBC |
-| **Combined total** | **To be calculated** |
+| ChatGPT | ~410K |
+| Claude | ~932K |
+| **Combined total** | ~1342K|
 
 ### Usage by team member
 
@@ -64,6 +70,6 @@ Token usage for both tools is recorded below for the project development period.
 |---|---|---|---|
 | Abhishek Saxena | B. Asset Registry, Persistence and Conflict Checks | Claude | ~217K |
 | Progga Paromita Dutta | D. Use Decisions and Audit Log | ChatGPT (OpenAI) | ~200K |
-| Srishti Singh | C. Lineage Graph Engine | Claude | ~515k       |
+| Srishti Singh | C. Lineage Graph Engine | Claude | ~515k 
 | Yeshitha Bhuvanesh | A.  Policy Registry and Use Rules | ChatGPT (OpenAI) | ~210K |
-
+| Riley Tang | E. Platform and Security | Claude | 200k |

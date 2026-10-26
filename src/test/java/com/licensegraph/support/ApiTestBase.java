@@ -11,14 +11,14 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 
 /**
- * REST Assured base for API tests (Module E, task E6).
+ * AI-assisted: REST Assured test infrastructure (E6).
  *
  * <p>Starts the application, registers a client through {@code POST /api/clients}, and exposes
  * {@link #asCaller()} with that client's {@code X-API-Key}. Other modules should extend this class
  * instead of starting their own server or inventing a key.
  *
- * <p>Cross-client 404 checks for policies, assets, edges, and decisions belong in those modules'
- * API tests once their endpoints are merged. This base only supplies the two callers.
+ * <p>This base only supplies the callers. Cross-client checks are in
+ * {@link com.licensegraph.security.ClientIsolationApiTest}.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 public abstract class ApiTestBase {

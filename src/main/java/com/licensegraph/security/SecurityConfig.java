@@ -10,8 +10,11 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 /**
- * Stateless API security. The API-key filter enforces authentication and writes the Section 10
- * error body. Authorization stays open so a missing key is 401 from that filter, not 403.
+ * AI-assisted: Spring Security configuration.
+ *
+ * <p>Stateless API security. The API-key filter enforces authentication and writes
+ * the Section 10 error body. Authorization stays open so a missing key is 401 from that
+ * filter, not 403.
  */
 @Configuration
 public class SecurityConfig {
@@ -27,18 +30,21 @@ public class SecurityConfig {
      */
     @Bean
     FilterRegistrationBean<ApiKeyFilter> apiKeyFilterRegistration(ApiKeyFilter apiKeyFilter) {
-        FilterRegistrationBean<ApiKeyFilter> registration = new FilterRegistrationBean<>(apiKeyFilter);
+        FilterRegistrationBean<ApiKeyFilter> registration =
+                new FilterRegistrationBean<>(apiKeyFilter);
         registration.setEnabled(false);
         return registration;
     }
 
     @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http, ApiKeyFilter apiKeyFilter) throws Exception {
+    SecurityFilterChain securityFilterChain(HttpSecurity http, ApiKeyFilter apiKeyFilter)
+            throws Exception {
         http.csrf(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
                 .logout(AbstractHttpConfigurer::disable)
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
                 .addFilterBefore(apiKeyFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
