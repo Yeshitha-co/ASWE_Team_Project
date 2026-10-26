@@ -83,7 +83,7 @@ mvn verify    # tests, then the JaCoCo coverage report and the coverage check
 
 `mvn verify` writes the coverage report to `target/site/jacoco/index.html` and fails the build if branch coverage across the project is below 55%. The report for the tagged release is committed with that release.
 
-API tests use REST Assured on top of Module E's `ApiTestBase`, which starts the application on a random port and registers a client with its own API key; for example, `AssetApiTest` covers every asset endpoint and error code over HTTP.
+API tests use REST Assured on top of Module E's `ApiTestBase`, which starts the application on a random port and registers a client with its own API key; for example, `AssetApiTest` and `DerivationApiTest` cover the asset and lineage endpoints and every error code over HTTP.
 
 `AssetPersistenceRestartTest` checks that data survives an application restart on the `postgres` profile. It runs only when `DB_URL` is set, so CI without PostgreSQL skips it. To run it, start PostgreSQL as described in [Run with PostgreSQL](#run-with-postgresql), set `DB_URL`, `DB_USER` and `DB_PASSWORD`, then:
 
@@ -202,7 +202,7 @@ Done:
 - B9: README assembled from every module's section, with the third-party code list.
 - Schema documented in [`docs/schema.sql`](docs/schema.sql).
 - Module A: versioned policy registry, intended-use rules and obligations (see [Module A: Policies](#module-a-policies)).
-- Module C: derivation recording with cycle and duplicate checks, and ancestor and descendant queries (see [Module C: Lineage](#module-c-lineage)).
+- Module C: derivation recording with cycle and duplicate checks, and ancestor and descendant queries, with unit tests and REST Assured API tests in `DerivationApiTest` (see [Module C: Lineage](#module-c-lineage)).
 - Module D: intended-use decisions with blocking paths and an insert-only decision history (see [Module D: Use decisions](#module-d-use-decisions)).
 - Cross-client access returns 404 for policies, assets, lineage queries and decisions.
 
@@ -576,9 +576,9 @@ Records that one output asset was produced from one or more input assets.
 1. Checks that the output and every input exist for the caller.
 2. Rejects any input that would make an asset its own ancestor (including an asset derived from itself).
 3. Rejects an edge that is already stored or repeated in the same request.
-4. Stores every edge, then asks Module B's conflict checker for upstream policy conflicts, stores them on the edges and returns them. Conflicts never reject the request.
+4. Asks Module B's conflict checker for upstream policy conflicts, then stores every edge along with the conflicts that came from its own input, and returns them. Conflicts never reject the request.
 
-Steps 1 to 3 and the insert run in one transaction under a per-client lock, so if any check fails nothing from the request is saved, and two simultaneous requests cannot form a cycle together.
+All four steps run in one transaction under a per-client lock, so if any check fails nothing from the request is saved, and two simultaneous requests cannot form a cycle together.
 
 **Success:** `201 Created` with the created edges, any conflicts, and how many ancestors the output now has.
 
