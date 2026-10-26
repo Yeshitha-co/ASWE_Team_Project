@@ -1,11 +1,8 @@
-
 package com.licensegraph.decision;
 
 import com.licensegraph.common.Decision;
 import com.licensegraph.policy.RuleOutcome;
-
 import java.util.List;
-
 /**
  * Combines individual policy evaluation results into a final use decision.
  *
@@ -18,6 +15,7 @@ import java.util.List;
  * persist decisions.
  *
  */
+
 public class PolicyEvaluation {
 
     /**

@@ -63,3 +63,4 @@ Token usage for both tools is recorded below for the project development period.
 | Team member | Module | AI tool | Token usage |
 |---|---|---|---|
 | Abhishek Saxena | B. Asset Registry, Persistence and Conflict Checks | Claude | ~217K |
+| Progga Paromita Dutta | D. Use Decisions and Audit Log | ChatGPT (OpenAI) | ~200K |

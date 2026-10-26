@@ -1,18 +1,20 @@
 
 package com.licensegraph.decision;
 
-import com.licensegraph.common.*;
-import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import com.licensegraph.common.AssetRef;
+import com.licensegraph.common.LineageEdge;
+import com.licensegraph.common.LineageGraph;
+import com.licensegraph.common.PolicyRef;
 import java.util.List;
 import java.util.Set;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import org.junit.jupiter.api.Test;
 
 class BlockingPathBuilderTest {
 
     @Test
-    void shouldFindPathFromModelCToDatasetA() {
+    void shouldFindPathFromModelCtoDatasetA() {
 
         // Step 1: Create three assets
         AssetRef datasetA = new AssetRef("Dataset-A", 1);

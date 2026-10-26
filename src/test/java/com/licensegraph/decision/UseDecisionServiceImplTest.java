@@ -1,23 +1,39 @@
 
 package com.licensegraph.decision;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+
 import com.licensegraph.asset.AssetLookup;
 import com.licensegraph.asset.AssetView;
-import com.licensegraph.common.*;
+import com.licensegraph.common.AssetRef;
+import com.licensegraph.common.Decision;
+import com.licensegraph.common.IntendedUse;
+import com.licensegraph.common.LineageEdge;
+import com.licensegraph.common.LineageGraph;
+import com.licensegraph.common.Obligation;
+import com.licensegraph.common.ObligationType;
+import com.licensegraph.common.PolicyRef;
 import com.licensegraph.common.exception.NotFoundException;
 import com.licensegraph.lineage.LineageQueryService;
-import com.licensegraph.policy.*;
-
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
+import com.licensegraph.policy.PolicyLookup;
+import com.licensegraph.policy.PolicyRules;
+import com.licensegraph.policy.PolicyView;
+import com.licensegraph.policy.RuleOutcome;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 class UseDecisionServiceImplTest {
 

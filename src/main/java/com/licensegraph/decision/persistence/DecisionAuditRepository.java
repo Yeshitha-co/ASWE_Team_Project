@@ -1,10 +1,8 @@
-
 package com.licensegraph.decision.persistence;
-
-import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.jpa.repository.JpaRepository;
 
 /**
  * Spring Data JPA repository for persisted decision audit records.
@@ -19,6 +17,8 @@ import java.util.Optional;
  * the {@link JpaDecisionAuditStore} implementation rather than
  * directly by other modules.
  *
+ * <p>AI-assisted: AI assistance was used to develop and document
+ * client-scoped repository queries and refine code formatting.
  *
  */
 interface DecisionAuditRepository

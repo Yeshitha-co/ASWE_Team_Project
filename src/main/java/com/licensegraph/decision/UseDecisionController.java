@@ -32,6 +32,10 @@ import org.springframework.web.bind.annotation.RestController;
  * by Module E's authentication mechanism. Client identifiers supplied
  * by HTTP callers are not trusted.
  *
+ * <p>AI-assisted: AI assistance was used to refine intended-use
+ * validation, integrate shared exception handling, improve controller
+ * tests, and resolve Checkstyle warnings.
+ *
  */
 @RestController
 @RequestMapping("/api/use-decisions")

@@ -83,13 +83,13 @@ create table license_policies (
     constraint uk_policy_client_policy_version unique (client_id, policy_id, version)
 );
 
-create index ix_edge_by_output 
+create index ix_edge_by_output
    on derivation_edge (client_id, output_asset_id, output_version);
 
-create index ix_edge_by_input 
+create index ix_edge_by_input
    on derivation_edge (client_id, input_asset_id, input_version);
 
-alter table if exists derivation_edge_conflict 
-   add constraint FKdfsciqf96f9orrx5vji6v9qwr 
-   foreign key (edge_id) 
+alter table if exists derivation_edge_conflict
+   add constraint FKdfsciqf96f9orrx5vji6v9qwr
+   foreign key (edge_id)
    references derivation_edge;
