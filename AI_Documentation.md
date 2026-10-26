@@ -2,9 +2,9 @@
 
 ## 1. Overview
 
-This document describes the use of AI tools during the development of LicenseGraph. It records the tools used, their purposes, representative prompts, how AI-assisted code is identified, and the associated token usage.
+This document describes how AI tools were used during the development of LicenseGraph. It records the tools used, their purposes, representative prompts, how we identify AI-assisted code, and the associated token usage.
 
-AI tools were used to support development and problem-solving. The team made implementation decisions, reviewed AI suggestions, and remains responsible for the final implementation.
+The team used AI tools to support development and problem-solving. The team made implementation decisions, reviewed AI suggestions, and remains responsible for the final implementation.
 
 ## 2. AI Tools Used
 
@@ -56,13 +56,13 @@ This marker is used for code generated or materially assisted by an AI tool, inc
 
 ## 5. Token Usage
 
-Token usage for both tools is recorded below for the project development period.
+The table below records token usage for both tools during the project development period.
 
 | AI tool | Total token usage |
 |---|---|
-| ChatGPT | TBC |
-| Claude | TBC |
-| **Combined total** | **To be calculated** |
+| ChatGPT | ~410K |
+| Claude | ~932K |
+| **Combined total** | ~1342K|
 
 ### Usage by team member
 
@@ -70,5 +70,6 @@ Token usage for both tools is recorded below for the project development period.
 |---|---|---|---|
 | Abhishek Saxena | B. Asset Registry, Persistence and Conflict Checks | Claude | ~217K |
 | Progga Paromita Dutta | D. Use Decisions and Audit Log | ChatGPT (OpenAI) | ~200K |
+| Srishti Singh | C. Lineage Graph Engine | Claude | ~515k 
 | Yeshitha Bhuvanesh | A.  Policy Registry and Use Rules | ChatGPT (OpenAI) | ~210K |
 | Riley Tang | E. Platform and Security | Claude | 200k |
