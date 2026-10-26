@@ -73,7 +73,7 @@ class LineageQueryServiceImplTest {
     }
 
     @Test
-    void descendantsOfDatasetAReachTheWholeChain() {
+    void descendantsOfDatasetReachTheWholeChain() {
         LineageFixtures.store(repository, CLIENT, LineageFixtures.chainEdges());
 
         LineageGraph graph = service.findDescendants(CLIENT, DATASET_A);

@@ -163,14 +163,16 @@ class DerivationServiceImplTest {
                 .isInstanceOfSatisfying(ConflictException.class, e -> {
                     assertThat(e.code()).isEqualTo(ErrorCode.CYCLE_DETECTED);
                     assertThat(e.details().get("cyclePath"))
-                            .isEqualTo(List.of("dataset-A:v1", "model-C:v1", "model-B:v1", "dataset-A:v1"));
+                            .isEqualTo(List.of(
+                                    "dataset-A:v1", "model-C:v1", "model-B:v1", "dataset-A:v1"));
                 });
         assertThat(repository.count()).isEqualTo(2);
     }
 
     @Test
     void conflictsAreReturnedAndKeptOnTheEdge() {
-        PolicyConflict conflict = new PolicyConflict(DATASET_A, new PolicyRef("license-A", 1), "derivatives");
+        PolicyConflict conflict =
+                new PolicyConflict(DATASET_A, new PolicyRef("license-A", 1), "derivatives");
         when(conflictChecker.check(any(), any(), any())).thenReturn(List.of(conflict));
 
         DerivationResult result = service.recordDerivation(
@@ -199,7 +201,8 @@ class DerivationServiceImplTest {
         try {
             Callable<String> forward = attempt(start, MODEL_B, DATASET_A);
             Callable<String> backward = attempt(start, DATASET_A, MODEL_B);
-            List<Future<String>> futures = new ArrayList<>(List.of(pool.submit(forward), pool.submit(backward)));
+            List<Future<String>> futures =
+                    new ArrayList<>(List.of(pool.submit(forward), pool.submit(backward)));
             start.countDown();
 
             List<String> outcomes = new ArrayList<>();
@@ -235,12 +238,14 @@ class DerivationServiceImplTest {
         assertThatThrownBy(() -> service.recordDerivation(
                 CLIENT, MODEL_B, List.of(in(MODEL_B, RelationType.DERIVED_FROM))))
                 .isInstanceOfSatisfying(ConflictException.class, e ->
-                        assertThat(e.details().get("cyclePath")).isEqualTo(List.of("model-B:v1", "model-B:v1")));
+                        assertThat(e.details().get("cyclePath"))
+                                .isEqualTo(List.of("model-B:v1", "model-B:v1")));
     }
 
     @Test
     void failureAfterValidationSavesNothing() {
-        when(conflictChecker.check(any(), any(), any())).thenThrow(new IllegalStateException("checker down"));
+        when(conflictChecker.check(any(), any(), any()))
+                .thenThrow(new IllegalStateException("checker down"));
 
         assertThatThrownBy(() -> service.recordDerivation(CLIENT, MERGED, List.of(
                 in(LEFT, RelationType.MERGED_FROM), in(RIGHT, RelationType.MERGED_FROM))))
@@ -248,12 +253,15 @@ class DerivationServiceImplTest {
         assertThat(repository.count()).isZero();
     }
 
-    /** Waits for the start signal, then records output-from-input; returns "ok" or the error code. */
+    /**
+     * Waits for the start signal, then records output-from-input; returns "ok" or the error code.
+     */
     private Callable<String> attempt(CountDownLatch start, AssetRef output, AssetRef input) {
         return () -> {
             start.await();
             try {
-                service.recordDerivation(CLIENT, output, List.of(in(input, RelationType.DERIVED_FROM)));
+                service.recordDerivation(
+                        CLIENT, output, List.of(in(input, RelationType.DERIVED_FROM)));
                 return "ok";
             } catch (ConflictException e) {
                 return e.code().name();

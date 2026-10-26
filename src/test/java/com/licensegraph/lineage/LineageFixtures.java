@@ -58,10 +58,12 @@ public final class LineageFixtures {
     }
 
     /** Saves the given edges for one client, for tests that use the real repository. */
-    public static void store(DerivationEdgeRepository repository, String clientId, List<LineageEdge> edges) {
+    public static void store(
+            DerivationEdgeRepository repository, String clientId, List<LineageEdge> edges) {
         Instant now = Instant.now();
         for (LineageEdge edge : edges) {
-            repository.save(new DerivationEdge(clientId, edge.input(), edge.output(), edge.relation(), now));
+            repository.save(new DerivationEdge(
+                    clientId, edge.input(), edge.output(), edge.relation(), now));
         }
     }
 }

@@ -13,5 +13,6 @@ import java.util.List;
  */
 public interface DerivationService {
 
-    DerivationResult recordDerivation(String clientId, AssetRef output, List<DerivationInput> inputs);
+    DerivationResult recordDerivation(
+            String clientId, AssetRef output, List<DerivationInput> inputs);
 }

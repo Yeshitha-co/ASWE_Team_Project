@@ -57,13 +57,16 @@ class DerivationControllerTest {
 
     @Test
     void postReturns201WithCreatedEdgesAndAncestorCount() throws Exception {
-        when(derivations.recordDerivation(eq(CLIENT), eq(MODEL_C), any())).thenReturn(new DerivationResult(
-                List.of(new LineageEdge(MODEL_B, MODEL_C, RelationType.FINE_TUNED_FROM)),
-                List.of(new PolicyConflict(DATASET_A, new PolicyRef("license-A", 1), "derivatives")), 2));
+        when(derivations.recordDerivation(eq(CLIENT), eq(MODEL_C), any()))
+                .thenReturn(new DerivationResult(
+                    List.of(new LineageEdge(MODEL_B, MODEL_C, RelationType.FINE_TUNED_FROM)),
+                    List.of(new PolicyConflict(
+                        DATASET_A, new PolicyRef("license-A", 1), "derivatives")), 2));
 
         mvc.perform(post("/api/derivations").contentType(MediaType.APPLICATION_JSON).content("""
                         {"output": {"assetId": "model-C", "version": 1},
-                         "inputs": [{"assetId": "model-B", "version": 1, "relation": "fine-tuned-from"}]}
+                         "inputs": [{"assetId": "model-B", "version": 1,
+                         "relation": "fine-tuned-from"}]}
                         """))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.output").value("model-C:v1"))
@@ -88,7 +91,8 @@ class DerivationControllerTest {
     void postWithMissingVersionIs400() throws Exception {
         mvc.perform(post("/api/derivations").contentType(MediaType.APPLICATION_JSON).content("""
                         {"output": {"assetId": "model-C"},
-                         "inputs": [{"assetId": "model-B", "version": 1, "relation": "fine-tuned-from"}]}
+                         "inputs": [{"assetId": "model-B", "version": 1,
+                         "relation": "fine-tuned-from"}]}
                         """))
                 .andExpect(status().isBadRequest());
         verifyNoInteractions(derivations);
@@ -96,7 +100,8 @@ class DerivationControllerTest {
 
     @Test
     void ancestorsReturns200WithSortedNodes() throws Exception {
-        when(lineage.findAncestors(CLIENT, MODEL_C)).thenReturn(LineageFixtures.chainAncestorsOfModelC());
+        when(lineage.findAncestors(CLIENT, MODEL_C))
+                .thenReturn(LineageFixtures.chainAncestorsOfModelC());
 
         mvc.perform(get("/api/assets/model-C/versions/1/ancestors"))
                 .andExpect(status().isOk())
