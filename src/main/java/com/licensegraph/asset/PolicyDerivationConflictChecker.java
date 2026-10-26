@@ -16,7 +16,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Finds upstream policy conflicts for a new derivation (Module B, task B7).
+ * AI-assisted: Finds upstream policy conflicts for a new derivation (Module B, task B7).
  *
  * <p>Module C passes each input's upstream graph: the input itself plus all of its ancestors.
  * For every node in those graphs, this checker looks up the asset's exact policy version and
@@ -31,8 +31,6 @@ import org.springframework.transaction.annotation.Transactional;
  * keeps the conflicts on it. A node reached through several inputs (for example a shared base in
  * a diamond) is reported once per field. The result is sorted by asset id, version and field so
  * responses are stable.
- *
- * <p>AI-assisted (Claude): drafted with Claude, reviewed by the Module B owner.
  */
 @Component
 @Transactional(readOnly = true)
@@ -56,7 +54,9 @@ public class PolicyDerivationConflictChecker implements DerivationConflictChecke
 
     @Override
     public List<PolicyConflict> check(
-            String clientId, List<DerivationInput> inputs, Map<AssetRef, LineageGraph> upstreamByInput) {
+            String clientId,
+            List<DerivationInput> inputs,
+            Map<AssetRef, LineageGraph> upstreamByInput) {
         // A set removes repeats when two inputs share an ancestor.
         Set<PolicyConflict> conflicts = new LinkedHashSet<>();
         for (DerivationInput input : inputs) {
@@ -76,7 +76,8 @@ public class PolicyDerivationConflictChecker implements DerivationConflictChecke
     }
 
     /** The input's upstream nodes; if C sent no graph for it, the input alone is checked. */
-    private static Set<AssetRef> upstreamOf(DerivationInput input, Map<AssetRef, LineageGraph> upstreamByInput) {
+    private static Set<AssetRef> upstreamOf(
+            DerivationInput input, Map<AssetRef, LineageGraph> upstreamByInput) {
         LineageGraph graph = upstreamByInput == null ? null : upstreamByInput.get(input.asset());
         if (graph == null || graph.nodes() == null) {
             return Set.of(input.asset());

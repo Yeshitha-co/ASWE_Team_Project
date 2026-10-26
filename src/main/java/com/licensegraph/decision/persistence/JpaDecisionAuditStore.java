@@ -24,6 +24,9 @@ import org.springframework.stereotype.Repository;
  * <p>All retrieval operations are scoped to the requesting client
  * to prevent access to another client's decision history.
  *
+ * <p>AI-assisted: AI assistance was used to review the audit
+ * persistence implementation, improve documentation, and resolve
+ *
  */
 
 @Repository

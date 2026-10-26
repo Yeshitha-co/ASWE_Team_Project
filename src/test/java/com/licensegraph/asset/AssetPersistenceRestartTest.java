@@ -17,13 +17,11 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
 /**
- * Checks that a stored asset survives an application restart on the persistent
- * {@code postgres} profile (Module B, tasks B6 and B10).
+ * AI-assisted: Checks that a stored asset survives an application restart on the persistent {@code
+ * postgres} profile (Module B, tasks B6 and B10).
  *
  * <p>Runs only when {@code DB_URL} is set, because CI has no PostgreSQL. See the README's
  * Database section for how to run it locally.
- *
- * <p>AI-assisted (Claude): test drafted with Claude, reviewed by the Module B owner.
  */
 @EnabledIfEnvironmentVariable(named = "DB_URL", matches = ".+")
 class AssetPersistenceRestartTest {
@@ -37,7 +35,8 @@ class AssetPersistenceRestartTest {
 
         try (ConfigurableApplicationContext first = startApplication()) {
             first.getBean(AssetRepository.class)
-                    .saveAndFlush(new Asset(clientId, ref, AssetType.DATASET, policy, "restart check"));
+                    .saveAndFlush(
+                            new Asset(clientId, ref, AssetType.DATASET, policy, "restart check"));
         }
 
         // The first application is fully shut down, so the asset can only come from the database.

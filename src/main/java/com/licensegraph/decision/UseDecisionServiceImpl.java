@@ -33,7 +33,12 @@ import org.springframework.stereotype.Service;
  * persistence are kept separate so decisions can be evaluated
  * without modifying stored data.
  *
+ * <p>AI-assisted: AI assistance was used to review the decision
+ * evaluation implementation, refine documentation, organize imports,
+ * and resolve Checkstyle warnings.
+ *
  */
+
 @Service
 public class UseDecisionServiceImpl implements UseDecisionService {
 

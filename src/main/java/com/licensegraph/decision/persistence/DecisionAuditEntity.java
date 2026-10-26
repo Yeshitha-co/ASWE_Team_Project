@@ -21,6 +21,9 @@ import java.time.Instant;
  * <p>This entity is used by the Module D audit persistence layer.
  * Database access is handled through DecisionAuditRepository.
  *
+ * <p>AI-assisted: AI was used to help implement and document
+ * this entity and refine its JPA mapping for audit persistence.
+ *
  */
 @Entity
 @Table(name = "decision_audit")

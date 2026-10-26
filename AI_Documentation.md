@@ -57,3 +57,10 @@ Token usage for both tools is recorded below for the project development period.
 | ChatGPT | TBC |
 | Claude | TBC |
 | **Combined total** | **To be calculated** |
+
+### Usage by team member
+
+| Team member | Module | AI tool | Token usage |
+|---|---|---|---|
+| Abhishek Saxena | B. Asset Registry, Persistence and Conflict Checks | Claude | ~217K |
+| Progga Paromita Dutta | D. Use Decisions and Audit Log | ChatGPT (OpenAI) | ~200K |

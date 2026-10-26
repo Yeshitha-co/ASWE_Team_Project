@@ -23,6 +23,10 @@ import java.util.Set;
  * traverses them in reverse because a blocking policy may belong
  * to an ancestor of the requested asset.
  *
+ * <p>AI-assisted: AI assistance was used to review the blocking
+ * path implementation, organize imports, and resolve Checkstyle
+ * warnings.
+ *
  */
 public class BlockingPathBuilder {
 

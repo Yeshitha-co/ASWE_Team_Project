@@ -14,5 +14,7 @@ import java.util.Map;
 public interface DerivationConflictChecker {
 
     List<PolicyConflict> check(
-            String clientId, List<DerivationInput> inputs, Map<AssetRef, LineageGraph> upstreamByInput);
+            String clientId,
+            List<DerivationInput> inputs,
+            Map<AssetRef, LineageGraph> upstreamByInput);
 }

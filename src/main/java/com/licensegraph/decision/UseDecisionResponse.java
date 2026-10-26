@@ -11,6 +11,10 @@ import java.util.List;
  * <p>Contains the decision identifier, evaluation timestamp,
  * and the complete evaluation result.
  *
+ * <p>AI-assisted: AI assistance was used to review the response
+ * structure, improve Javadoc documentation, and resolve
+ * Checkstyle warnings.
+ *
  * @param decisionId unique identifier of the recorded decision
  * @param evaluatedAt timestamp when the decision was evaluated
  * @param result evaluated permissions, blocking paths, and obligations

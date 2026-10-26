@@ -1,6 +1,7 @@
 package com.licensegraph.policy;
 
 import com.licensegraph.common.PolicyRef;
+import com.licensegraph.common.exception.NotFoundException;
 import com.licensegraph.security.ClientContext;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -89,6 +90,10 @@ public class PolicyController {
             @PathVariable int version) {
 
         String clientId = clientContext.currentClientId();
+        // A version below 1 can never exist, so it is not found (not a 500 from PolicyRef).
+        if (version < 1) {
+            throw NotFoundException.policy(policyId + ":v" + version);
+        }
         PolicyRef ref = new PolicyRef(policyId, version);
 
         LicensePolicy policy = policyService.findPolicyVersion(clientId, ref);
