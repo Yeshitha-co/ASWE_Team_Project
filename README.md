@@ -199,12 +199,15 @@ Done:
 - B7: `DerivationConflictChecker`, which reports upstream `derivatives` and `aiTraining` conflicts for new derivations, with unit tests.
 - B8: JaCoCo coverage report and 55% branch-coverage check (see [Tests and coverage](#tests-and-coverage)).
 - B10: REST Assured API tests for the asset endpoints (`AssetApiTest`): a success case, every error code, cross-client 404, and upstream conflicts reported through `POST /api/derivations`.
+- B9: README assembled from every module's section, with the third-party code list.
 - Schema documented in [`docs/schema.sql`](docs/schema.sql).
+- Module A: versioned policy registry, intended-use rules and obligations (see [Module A: Policies](#module-a-policies)).
+- Module C: derivation recording with cycle and duplicate checks, and ancestor and descendant queries (see [Module C: Lineage](#module-c-lineage)).
+- Module D: intended-use decisions with blocking paths and an insert-only decision history (see [Module D: Use decisions](#module-d-use-decisions)).
+- Cross-client access returns 404 for policies, assets, lineage queries and decisions.
 
 Still in progress:
 
-- B9: assemble the README sections from every module (due Oct 23)
-- E4 cross-client 404 for policies, assets, edges, and decisions, once those endpoints are merged. Their lookups already take `clientId` on their own branches.
 - E7: branch protection, issue templates, and the Projects board are not set up on the repository. The release tag is not created yet.
 
 ## Client registration
@@ -223,9 +226,9 @@ curl -i -X POST http://localhost:8080/api/clients
 
 The database stores `clientId` and the SHA-256 hex digest of `apiKey`. A later request cannot read the raw key back. Send the key on later calls as `X-API-Key`. A request to any other path without that header returns `401` with `code` `MISSING_API_KEY`. A wrong key returns `401` with `code` `INVALID_API_KEY`. A `clientId` field in the registration body is ignored.
 
-## Planned API
+## API routes
 
-These routes are specified for T2. Client registration (E), assets (B), derivations and lineage (C) and use decisions (D) are implemented; the policy routes (A) arrive with Module A's pull request. Every route requires an `X-API-Key` header except client registration.
+All T2 routes are implemented. Every route requires an `X-API-Key` header except client registration.
 
 | Method | Route | Module | Success |
 | --- | --- | --- | --- |
@@ -246,7 +249,7 @@ Policies, assets, edges, and decisions are insert-only. Another client’s recor
 
 ## API documentation
 
-Each module documents its endpoints below: inputs, outputs, side effects, status and error codes, call order, and correct and bad-usage examples. Client registration (Module E) is described in [Client registration](#client-registration). Sections for Modules C and D are added as their owners hand them over.
+Each module documents its endpoints below: inputs, outputs, side effects, status and error codes, call order, and correct and bad-usage examples. Client registration (Module E) is described in [Client registration](#client-registration).
 
 The usual call order for a client is: register (`POST /api/clients`), register policies, register assets that point to those policies, record derivations between assets, then check intended use.
 
@@ -549,6 +552,241 @@ Example: if `license-A:v1` had `derivatives=false`, recording Model-B as trained
 | `AssetLookup.findAsset(clientId, ref)` | C, D | the asset's type and exact policy version, or empty if missing or another client's |
 | `AssetLookup.findAssetsByPolicy(clientId, policy)` | Iteration 2 impact analysis | every asset version of the caller linked to an exact policy version |
 | `DerivationConflictChecker.check(clientId, inputs, upstreamByInput)` | C | upstream policy conflicts for a new derivation |
+
+### Module C: Lineage
+
+Records which asset versions were derived from which, keeps the graph free of cycles, and answers ancestry and descendant questions. Edges are stored from input to output and belong to the client that recorded them.
+
+#### `POST /api/derivations`
+
+Records that one output asset was produced from one or more input assets.
+
+**Call order:** register every asset involved first (`POST /api/assets`).
+
+**Request body**
+
+| Field | Required | Rules |
+| --- | --- | --- |
+| `output` | yes | `{ "assetId": ..., "version": ... }`, a positive version |
+| `inputs` | yes | a non-empty list of `{ "assetId", "version", "relation" }` |
+| `inputs[].relation` | yes | `trained-on`, `fine-tuned-from`, `merged-from`, `filtered-from` or `derived-from` |
+
+**What it does,** in this order:
+
+1. Checks that the output and every input exist for the caller.
+2. Rejects any input that would make an asset its own ancestor (including an asset derived from itself).
+3. Rejects an edge that is already stored or repeated in the same request.
+4. Stores every edge, then asks Module B's conflict checker for upstream policy conflicts, stores them on the edges and returns them. Conflicts never reject the request.
+
+Steps 1 to 3 and the insert run in one transaction under a per-client lock, so if any check fails nothing from the request is saved, and two simultaneous requests cannot form a cycle together.
+
+**Success:** `201 Created` with the created edges, any conflicts, and how many ancestors the output now has.
+
+```http
+POST /api/derivations
+X-API-Key: <your key>
+Content-Type: application/json
+
+{ "output": { "assetId": "model-B", "version": 1 },
+  "inputs": [ { "assetId": "dataset-A", "version": 1, "relation": "trained-on" } ] }
+```
+
+```json
+{
+  "output": "model-B:v1",
+  "created": [ { "input": "dataset-A:v1", "output": "model-B:v1", "relation": "trained-on" } ],
+  "conflicts": [],
+  "ancestorCount": 1
+}
+```
+
+Each conflict looks like `{ "source": "dataset-A:v1", "policy": "license-A:v1", "field": "derivatives" }` (see [Conflict checks on new derivations](#conflict-checks-on-new-derivations)).
+
+**Errors**
+
+| Status | Code | When |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | a field is missing, `inputs` is empty, a version is not positive, or `relation` is not one of the five values |
+| 409 | `CYCLE_DETECTED` | an input already descends from the output; `details.cyclePath` lists the loop |
+| 409 | `DUPLICATE_EDGE` | the same input, output and relation is already stored or repeated in the request |
+| 422 | `UNKNOWN_INPUT_ASSET` | the output or an input does not exist for the caller |
+
+**Bad usage:** with Model-B trained on Dataset-A and Model-C fine-tuned from Model-B, recording Dataset-A as derived from Model-C.
+
+```json
+{
+  "timestamp": "2026-10-26T16:53:11Z",
+  "status": 409,
+  "code": "CYCLE_DETECTED",
+  "message": "Edge model-B:v1 -> dataset-A:v1 would create a cycle",
+  "path": "/api/derivations",
+  "details": { "cyclePath": ["dataset-A:v1", "model-C:v1", "model-B:v1", "dataset-A:v1"] }
+}
+```
+
+**Bad usage:** an input that was never registered.
+
+```json
+{
+  "timestamp": "2026-10-26T16:42:53Z",
+  "status": 422,
+  "code": "UNKNOWN_INPUT_ASSET",
+  "message": "Unknown asset in request: ghost:v1",
+  "path": "/api/derivations"
+}
+```
+
+#### `GET /api/assets/{assetId}/versions/{version}/ancestors` and `.../descendants`
+
+Return everything an asset was built from (ancestors) or everything built from it (descendants), as a subgraph: the asset itself, every reachable asset, and the edges between them with their relations. In a diamond, a shared ancestor appears once.
+
+**Side effects:** none.
+
+**Success:** `200 OK`.
+
+```http
+GET /api/assets/model-C/versions/1/ancestors
+X-API-Key: <your key>
+```
+
+```json
+{
+  "root": "model-C:v1",
+  "nodes": ["dataset-A:v1", "model-B:v1", "model-C:v1"],
+  "edges": [
+    { "input": "model-B:v1", "output": "model-C:v1", "relation": "fine-tuned-from" },
+    { "input": "dataset-A:v1", "output": "model-B:v1", "relation": "trained-on" }
+  ]
+}
+```
+
+**Errors**
+
+| Status | Code | When |
+| --- | --- | --- |
+| 404 | `ASSET_NOT_FOUND` | the asset version does not exist, belongs to another client, or is not a positive integer |
+
+#### Interfaces for other modules
+
+| Interface | Used by | Purpose |
+| --- | --- | --- |
+| `LineageQueryService.findAncestors(clientId, target)` | D | the asset and all of its ancestors, with edges |
+| `LineageQueryService.findDescendants(clientId, source)` | Iteration 2 impact analysis | the asset and everything derived from it |
+
+### Module D: Use decisions
+
+Decides whether an asset version may be used for a purpose by checking the policy of the asset and of every ancestor, explains each block with a lineage path, and keeps an insert-only history of decisions.
+
+#### `POST /api/use-decisions`
+
+Evaluates one intended use and records the decision.
+
+**Call order:** after the asset, its ancestors and their policies are registered and the derivations are recorded.
+
+**Request body**
+
+| Field | Required | Rules |
+| --- | --- | --- |
+| `assetId` | yes | the asset to evaluate |
+| `version` | yes | positive integer |
+| `intendedUse` | yes | `commercial`, `redistribution`, `derivative`, `ai-training` or `internal` |
+
+**What it does:** loads the asset and its ancestors (Module C), reads each one's exact policy version (Module A), and checks the intended use against every policy with Module A's rules. If any policy blocks the use, the decision is `DENY`, with one shortest path from the requested asset back to each blocking asset. Obligations from every policy are merged; they never change the decision. `internal` is always allowed.
+
+**Side effects:** stores the decision, with the policy versions it was based on and a timestamp. Stored decisions are never changed.
+
+**Success:** `201 Created`.
+
+```http
+POST /api/use-decisions
+X-API-Key: <your key>
+Content-Type: application/json
+
+{ "assetId": "model-C", "version": 1, "intendedUse": "commercial" }
+```
+
+```json
+{
+  "decisionId": "4e28c554-4793-43d9-9c60-d6a2f2f88233",
+  "evaluatedAt": "2026-10-26T16:53:11.901571Z",
+  "result": {
+    "target": "model-C:v1",
+    "use": "commercial",
+    "decision": "DENY",
+    "blockingPaths": [
+      { "path": ["model-C:v1", "model-B:v1", "dataset-A:v1"],
+        "blockingPolicy": "license-A:v1", "blockingField": "commercialUse" }
+    ],
+    "evaluatedPolicies": ["license-A:v1", "license-B:v1", "license-C:v1"],
+    "obligations": [ { "type": "attribution", "source": "dataset-A:v1", "policy": "license-A:v1" } ]
+  }
+}
+```
+
+Model-B and Model-C allow commercial use on their own; the decision is `DENY` because of Dataset-A two generations up. An allowed use returns `"decision": "ALLOW"` with an empty `blockingPaths`.
+
+**Errors**
+
+| Status | Code | When |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | `assetId` or `intendedUse` is missing, or `version` is not positive |
+| 400 | `INVALID_INTENDED_USE` | `intendedUse` is not one of the five values; `details.field` is `intendedUse` |
+| 404 | `ASSET_NOT_FOUND` | the asset version does not exist for the caller |
+
+**Bad usage:** an intended use that does not exist.
+
+```json
+{
+  "timestamp": "2026-10-26T16:53:11Z",
+  "status": 400,
+  "code": "INVALID_INTENDED_USE",
+  "message": "Unknown intended use: resell (expected commercial, redistribution, derivative, ai-training or internal)",
+  "path": "/api/use-decisions",
+  "details": { "field": "intendedUse" }
+}
+```
+
+#### `GET /api/use-decisions/{decisionId}`
+
+Reads one stored decision, in the same shape as the `POST` response.
+
+**Side effects:** none. Policies are not re-evaluated.
+
+**Errors**
+
+| Status | Code | When |
+| --- | --- | --- |
+| 404 | `DECISION_NOT_FOUND` | no decision with this id, or it belongs to another client |
+
+```json
+{
+  "timestamp": "2026-10-26T16:53:12Z",
+  "status": 404,
+  "code": "DECISION_NOT_FOUND",
+  "message": "Decision not found: nope",
+  "path": "/api/use-decisions/nope"
+}
+```
+
+#### `GET /api/use-decisions?assetId=&version=`
+
+Lists every stored decision for one of the caller's asset versions, as an array of decisions. An asset with no decisions returns an empty array.
+
+**Side effects:** none.
+
+**Errors**
+
+| Status | Code | When |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | `assetId` or `version` is missing, or `version` is not a positive integer; `details.field` names it |
+
+#### Interfaces for other modules
+
+| Interface | Used by | Purpose |
+| --- | --- | --- |
+| `UseDecisionService.evaluate(clientId, target, use)` | Iteration 2 impact analysis | the decision without saving it |
+| `UseDecisionService.decideAndRecord(clientId, target, use)` | D's controller | the decision, saved to the history |
+| `DecisionAuditStore.findById` / `findByTarget` | D's controller | stored decisions, scoped to the client |
 
 Every error uses the same body. `details` is included only when there is something to add, such as the field that failed validation or the path of a cycle:
 
