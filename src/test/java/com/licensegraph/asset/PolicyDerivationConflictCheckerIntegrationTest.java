@@ -25,13 +25,11 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 /**
- * {@link PolicyDerivationConflictChecker} with real stored assets and the real
- * {@link JpaAssetLookup}; only Module A's {@link PolicyLookup} is mocked (Module B, B7 and B10).
+ * AI-assisted: {@link PolicyDerivationConflictChecker} with real stored assets and the real {@link
+ * JpaAssetLookup}; only Module A's {@link PolicyLookup} is mocked (Module B, B7 and B10).
  *
  * <p>Uses the work plan's running example: dataset-A:v1 (license-A:v1) -> model-B:v1
  * (license-B:v1) -> model-C:v1 (license-C:v1).
- *
- * <p>AI-assisted (Claude): tests drafted with Claude, reviewed by the Module B owner.
  */
 @DataJpaTest
 @Import({JpaAssetLookup.class, PolicyDerivationConflictChecker.class})
@@ -49,24 +47,27 @@ class PolicyDerivationConflictCheckerIntegrationTest {
     @MockitoBean
     private PolicyLookup policies;
 
-    private boolean licenseAAllowsDerivatives;
+    private boolean datasetPolicyAllowsDerivatives;
 
     @BeforeEach
     void storeChain() {
-        repository.saveAndFlush(new Asset(CLIENT, DATASET_A, AssetType.DATASET, LICENSE_A_V1, null));
-        repository.saveAndFlush(new Asset(CLIENT, MODEL_B, AssetType.MODEL, new PolicyRef("license-B", 1), null));
-        repository.saveAndFlush(new Asset(CLIENT, MODEL_C, AssetType.MODEL, new PolicyRef("license-C", 1), null));
-        licenseAAllowsDerivatives = true;
+        repository.saveAndFlush(
+                new Asset(CLIENT, DATASET_A, AssetType.DATASET, LICENSE_A_V1, null));
+        repository.saveAndFlush(
+                new Asset(CLIENT, MODEL_B, AssetType.MODEL, new PolicyRef("license-B", 1), null));
+        repository.saveAndFlush(
+                new Asset(CLIENT, MODEL_C, AssetType.MODEL, new PolicyRef("license-C", 1), null));
+        datasetPolicyAllowsDerivatives = true;
         when(policies.findPolicy(anyString(), any(PolicyRef.class))).thenAnswer(call -> {
             PolicyRef ref = call.getArgument(1);
-            boolean derivatives = !ref.equals(LICENSE_A_V1) || licenseAAllowsDerivatives;
+            boolean derivatives = !ref.equals(LICENSE_A_V1) || datasetPolicyAllowsDerivatives;
             return Optional.of(new PolicyView(ref, true, true, derivatives, true, false, false));
         });
     }
 
     @Test
     void reportsDatasetTwoGenerationsUpWithItsExactPolicyVersion() {
-        licenseAAllowsDerivatives = false;
+        datasetPolicyAllowsDerivatives = false;
 
         assertThat(checker.check(CLIENT,
                 List.of(new DerivationInput(MODEL_C, RelationType.FINE_TUNED_FROM)),
@@ -84,7 +85,7 @@ class PolicyDerivationConflictCheckerIntegrationTest {
 
     @Test
     void anotherClientsGraphFindsNoAssetsAndNoConflicts() {
-        licenseAAllowsDerivatives = false;
+        datasetPolicyAllowsDerivatives = false;
 
         assertThat(checker.check("client-b",
                 List.of(new DerivationInput(MODEL_C, RelationType.FINE_TUNED_FROM)),

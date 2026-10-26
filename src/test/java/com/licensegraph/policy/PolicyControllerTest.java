@@ -3,7 +3,9 @@ package com.licensegraph.policy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -135,5 +137,19 @@ class PolicyControllerTest {
         verify(policyService).createPolicy(
                 org.mockito.ArgumentMatchers.eq("client-1"),
                 any(LicensePolicy.class));
+    }
+
+    /**
+     * AI-assisted: Tests that a version below 1 is reported as not found instead of failing.
+     */
+    @Test
+    void findPolicyVersionWithNonPositiveVersionReturnsNotFound() throws Exception {
+        when(clientContext.currentClientId()).thenReturn("client-1");
+
+        mockMvc.perform(get("/api/policies/license-A/versions/0"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("POLICY_NOT_FOUND"));
+
+        verifyNoInteractions(policyService);
     }
 }

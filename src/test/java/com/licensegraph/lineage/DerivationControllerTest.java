@@ -116,4 +116,19 @@ class DerivationControllerTest {
                 .andExpect(jsonPath("$.root").value("dataset-A:v1"))
                 .andExpect(jsonPath("$.nodes.length()").value(3));
     }
+
+    /**
+     * AI-assisted: A version below 1 in the path is reported as not found instead of failing.
+     */
+    @Test
+    void nonPositiveVersionInLineagePathReturns404() throws Exception {
+        mvc.perform(get("/api/assets/model-C/versions/0/ancestors"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("ASSET_NOT_FOUND"));
+        mvc.perform(get("/api/assets/model-C/versions/0/descendants"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("ASSET_NOT_FOUND"));
+
+        verifyNoInteractions(lineage);
+    }
 }

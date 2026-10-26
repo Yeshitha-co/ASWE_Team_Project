@@ -17,13 +17,11 @@ import java.util.Objects;
 import org.hibernate.annotations.Immutable;
 
 /**
- * One stored asset version, owned by a single client (Module B, task B1).
+ * AI-assisted: One stored asset version, owned by a single client (Module B, task B1).
  *
  * <p>Assets are insert-only: there are no setters and Hibernate never issues updates for this
  * entity. Linking an asset to a different policy means registering a new asset version. The
  * pair (assetId, version) is unique per client, so two clients may each own a {@code dataset-A:v1}.
- *
- * <p>AI-assisted (Claude): entity and mapping drafted with Claude, reviewed by the Module B owner.
  */
 @Entity
 @Immutable
