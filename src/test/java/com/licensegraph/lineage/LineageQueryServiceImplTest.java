@@ -30,7 +30,8 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 /**
- * Tests ancestor and descendant walks against a real in-memory database, with Module B's
+ * AI-assisted: Tests ancestor and descendant walks against a real in-memory database, with Module
+ * B's
  * asset lookup mocked (C9).
  */
 @DataJpaTest
@@ -73,7 +74,7 @@ class LineageQueryServiceImplTest {
     }
 
     @Test
-    void descendantsOfDatasetAReachTheWholeChain() {
+    void descendantsOfDatasetReachTheWholeChain() {
         LineageFixtures.store(repository, CLIENT, LineageFixtures.chainEdges());
 
         LineageGraph graph = service.findDescendants(CLIENT, DATASET_A);

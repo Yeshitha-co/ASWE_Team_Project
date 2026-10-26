@@ -11,7 +11,7 @@ import jakarta.validation.constraints.Positive;
 import java.util.List;
 
 /**
- * JSON body for POST /api/derivations: one output and one or more inputs (C2).
+ * AI-assisted: JSON body for POST /api/derivations: one output and one or more inputs (C2).
  * Bean Validation rejects missing or malformed fields with 400 before the service runs.
  */
 public record DerivationRequest(

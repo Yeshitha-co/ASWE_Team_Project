@@ -30,7 +30,8 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * Records derivations: validates every referenced asset, rejects cycles and duplicate edges,
+ * AI-assisted: Records derivations: validates every referenced asset, rejects cycles and duplicate
+ * edges,
  * stores the edges with any upstream policy conflicts, and returns the result (C2 to C5).
  *
  * <p>All checks and inserts for one request run in a single transaction while holding a

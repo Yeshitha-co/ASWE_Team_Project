@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Shared lineage fixtures for tests in B, C and D (C8): a simple chain and a diamond.
+ * AI-assisted: Shared lineage fixtures for tests in B, C and D (C8): a simple chain and a diamond.
  *
  * <p>Chain: dataset-A:v1 -> model-B:v1 -> model-C:v1.
  * Diamond: base:v1 -> left:v1, base:v1 -> right:v1, left:v1 -> merged:v1, right:v1 -> merged:v1.
@@ -58,10 +58,12 @@ public final class LineageFixtures {
     }
 
     /** Saves the given edges for one client, for tests that use the real repository. */
-    public static void store(DerivationEdgeRepository repository, String clientId, List<LineageEdge> edges) {
+    public static void store(
+            DerivationEdgeRepository repository, String clientId, List<LineageEdge> edges) {
         Instant now = Instant.now();
         for (LineageEdge edge : edges) {
-            repository.save(new DerivationEdge(clientId, edge.input(), edge.output(), edge.relation(), now));
+            repository.save(new DerivationEdge(
+                    clientId, edge.input(), edge.output(), edge.relation(), now));
         }
     }
 }

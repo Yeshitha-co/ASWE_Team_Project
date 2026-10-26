@@ -7,7 +7,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 /**
- * Data access for derivation edges (C1). Used only inside Module C; other modules go through
+ * AI-assisted: Data access for derivation edges (C1). Used only inside Module C; other modules go
+ * through
  * {@link LineageQueryService}.
  */
 
