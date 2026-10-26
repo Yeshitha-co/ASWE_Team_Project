@@ -4,6 +4,7 @@ package com.licensegraph.decision;
 
 import com.licensegraph.common.*;
 import com.licensegraph.security.ClientContext;
+import com.licensegraph.security.GlobalExceptionHandler;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -41,7 +42,7 @@ class UseDecisionControllerTest {
         );
 
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
-                .setControllerAdvice(new UseDecisionExceptionHandler())
+                .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
 
         when(clientContext.currentClientId())
@@ -241,6 +242,55 @@ class UseDecisionControllerTest {
         );
     }
 
+    /**
+     * AI-assisted: Tests that a missing decision uses the shared error body.
+     */
+    @Test
+    void missingDecisionUsesSharedErrorBody() throws Exception {
+        when(decisionAuditStore.findById("client-1", "nope")).thenReturn(Optional.empty());
 
+        mockMvc.perform(get("/api/use-decisions/nope"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.code").value("DECISION_NOT_FOUND"))
+                .andExpect(jsonPath("$.path").value("/api/use-decisions/nope"));
+    }
 
+    /**
+     * AI-assisted: Tests that an unknown intended use gives 400 INVALID_INTENDED_USE.
+     */
+    @Test
+    void unknownIntendedUseReturnsInvalidIntendedUse() throws Exception {
+        mockMvc.perform(post("/api/use-decisions")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                            { "assetId": "model-C", "version": 1, "intendedUse": "resell" }
+                            """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_INTENDED_USE"))
+                .andExpect(jsonPath("$.details.field").value("intendedUse"));
+
+        verifyNoInteractions(useDecisionService);
+    }
+
+    /**
+     * AI-assisted: Tests that a missing or non-positive history version gives 400, not 500.
+     */
+    @Test
+    void historyWithBadVersionReturnsValidationError() throws Exception {
+        mockMvc.perform(get("/api/use-decisions").param("assetId", "model-C"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.details.field").value("version"));
+        mockMvc.perform(get("/api/use-decisions")
+                        .param("assetId", "model-C")
+                        .param("version", "0"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+        mockMvc.perform(get("/api/use-decisions").param("version", "1"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.details.field").value("assetId"));
+
+        verifyNoInteractions(decisionAuditStore);
+    }
 }

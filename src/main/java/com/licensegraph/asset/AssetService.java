@@ -16,18 +16,19 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Registers and reads asset versions (Module B, tasks B2 to B4).
+ * AI-assisted: Registers and reads asset versions (Module B, tasks B2 to B4).
  *
  * <p>Every method takes the caller's {@code clientId} explicitly, so tests need no security
  * setup and no request can act for another client. Assets are insert-only: there is no update
  * or delete, and linking an asset to a different policy means registering a new version.
- *
- * <p>AI-assisted (Claude): drafted with Claude, reviewed by the Module B owner.
  */
 @Service
 public class AssetService {
 
-    /** Ids appear in URL paths and in printed names like {@code dataset-A:v1}, so '/', ':' and spaces are not allowed. */
+    /**
+     * Ids appear in URL paths and in printed names like {@code dataset-A:v1}, so '/', ':' and
+     * spaces are not allowed.
+     */
     private static final Pattern ID_PATTERN = Pattern.compile("[A-Za-z0-9._-]{1,255}");
 
     static final int MAX_METADATA_LENGTH = 2000;
@@ -64,7 +65,8 @@ public class AssetService {
         String policyId = requireId("policyId", request.policyId());
         int policyVersion = requirePositive("policyVersion", request.policyVersion());
         if (request.metadata() != null && request.metadata().length() > MAX_METADATA_LENGTH) {
-            throw validationError("metadata must be at most " + MAX_METADATA_LENGTH + " characters", "metadata");
+            throw validationError(
+                    "metadata must be at most " + MAX_METADATA_LENGTH + " characters", "metadata");
         }
         AssetType type = parseType(request.type());
 
@@ -79,7 +81,8 @@ public class AssetService {
         }
 
         try {
-            Asset saved = repository.saveAndFlush(new Asset(clientId, ref, type, policy, request.metadata()));
+            Asset saved = repository.saveAndFlush(
+                    new Asset(clientId, ref, type, policy, request.metadata()));
             return AssetResponse.from(saved);
         } catch (DataIntegrityViolationException ex) {
             // Two identical requests at the same moment: both passed the exists check, and the
@@ -131,7 +134,8 @@ public class AssetService {
             return AssetType.fromJson(value);
         } catch (IllegalArgumentException ex) {
             throw new BadRequestException(ErrorCode.INVALID_ASSET_TYPE,
-                    "Unknown asset type: " + value + " (expected dataset, model, code or derived-dataset)",
+                    "Unknown asset type: " + value
+                            + " (expected dataset, model, code or derived-dataset)",
                     Map.of("field", "type"));
         }
     }

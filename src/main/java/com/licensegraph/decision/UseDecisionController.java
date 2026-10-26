@@ -2,13 +2,14 @@
 package com.licensegraph.decision;
 
 import com.licensegraph.common.AssetRef;
+import com.licensegraph.common.IntendedUse;
+import com.licensegraph.common.exception.BadRequestException;
+import com.licensegraph.common.exception.ErrorCode;
 import com.licensegraph.common.exception.NotFoundException;
 import com.licensegraph.security.ClientContext;
-
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
-
+import java.util.List;
+import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -18,8 +19,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.List;
 
 /**
  * REST controller exposing Module D's use decision and audit history APIs.
@@ -88,7 +87,7 @@ public class UseDecisionController {
         UseDecisionRecord record = useDecisionService.decideAndRecord(
                 clientId,
                 target,
-                request.intendedUse());
+                parseIntendedUse(request.intendedUse()));
 
         return UseDecisionResponse.from(record);
     }
@@ -139,8 +138,16 @@ public class UseDecisionController {
 
     @GetMapping
     public List<UseDecisionResponse> getDecisionHistory(
-            @RequestParam @NotBlank String assetId,
-            @RequestParam @Min(1) int version) {
+            @RequestParam(required = false) String assetId,
+            @RequestParam(required = false) Integer version) {
+
+        // Checked here so a missing or non-positive parameter is a 400, not a 500.
+        if (assetId == null || assetId.isBlank()) {
+            throw validationError("assetId is required", "assetId");
+        }
+        if (version == null || version < 1) {
+            throw validationError("version must be a positive integer", "version");
+        }
 
         String clientId = clientContext.currentClientId();
         AssetRef target = new AssetRef(assetId, version);
@@ -149,5 +156,28 @@ public class UseDecisionController {
                 .stream()
                 .map(UseDecisionResponse::from)
                 .toList();
+    }
+
+    /**
+     * AI-assisted: Converts the request's intended use to {@link IntendedUse}.
+     *
+     * @param value the JSON value, for example {@code ai-training}
+     * @return the matching intended use
+     * @throws BadRequestException {@code INVALID_INTENDED_USE} if the value is unknown
+     */
+    private static IntendedUse parseIntendedUse(String value) {
+        try {
+            return IntendedUse.fromJson(value);
+        } catch (IllegalArgumentException ex) {
+            throw new BadRequestException(ErrorCode.INVALID_INTENDED_USE,
+                    "Unknown intended use: " + value
+                            + " (expected commercial, redistribution, derivative, ai-training"
+                            + " or internal)",
+                    Map.of("field", "intendedUse"));
+        }
+    }
+
+    private static BadRequestException validationError(String message, String field) {
+        return new BadRequestException(ErrorCode.VALIDATION_ERROR, message, Map.of("field", field));
     }
 }

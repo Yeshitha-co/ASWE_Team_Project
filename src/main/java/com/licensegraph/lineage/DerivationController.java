@@ -1,6 +1,7 @@
 package com.licensegraph.lineage;
 
 import com.licensegraph.common.AssetRef;
+import com.licensegraph.common.exception.NotFoundException;
 import com.licensegraph.lineage.LineageResponses.DerivationResponse;
 import com.licensegraph.lineage.LineageResponses.GraphResponse;
 import com.licensegraph.security.ClientContext;
@@ -55,8 +56,7 @@ public class DerivationController {
     @GetMapping("/assets/{assetId}/versions/{version}/ancestors")
     public GraphResponse ancestors(@PathVariable String assetId, @PathVariable int version) {
         return GraphResponse.from(
-                lineage.findAncestors(clientContext.currentClientId(), new AssetRef(assetId,
-                        version)));
+                lineage.findAncestors(clientContext.currentClientId(), pathRef(assetId, version)));
     }
 
     /**
@@ -65,7 +65,15 @@ public class DerivationController {
     @GetMapping("/assets/{assetId}/versions/{version}/descendants")
     public GraphResponse descendants(@PathVariable String assetId, @PathVariable int version) {
         return GraphResponse.from(
-                lineage.findDescendants(clientContext.currentClientId(), new AssetRef(assetId,
-                        version)));
+                lineage.findDescendants(
+                        clientContext.currentClientId(), pathRef(assetId, version)));
+    }
+
+    /** A version below 1 can never exist, so it is not found (not a 500 from AssetRef). */
+    private static AssetRef pathRef(String assetId, int version) {
+        if (version < 1) {
+            throw NotFoundException.asset(assetId + ":v" + version);
+        }
+        return new AssetRef(assetId, version);
     }
 }
