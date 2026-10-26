@@ -1,11 +1,8 @@
 
 package com.licensegraph.decision;
 
-import com.licensegraph.common.IntendedUse;
-
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 
 /**
  * Request body for creating a new use decision.
@@ -22,11 +19,13 @@ import jakarta.validation.constraints.NotNull;
  *
  * @param assetId non-blank identifier of the target asset
  * @param version positive version number of the target asset
- * @param intendedUse intended use to evaluate
+ * @param intendedUse intended use to evaluate, as its JSON value (for example
+ *     {@code commercial}); kept as text so an unknown value is reported as
+ *     {@code INVALID_INTENDED_USE} rather than a generic parse error
  */
 public record CreateUseDecisionRequest(
         @NotBlank String assetId,
         @Min(1) int version,
-        @NotNull IntendedUse intendedUse
+        @NotBlank String intendedUse
 ) {
 }
