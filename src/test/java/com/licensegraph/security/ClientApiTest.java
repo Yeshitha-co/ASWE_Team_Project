@@ -14,10 +14,9 @@ import org.springframework.context.annotation.Import;
 /**
  * REST Assured checks for client registration, key storage, and caller identity (E8).
  *
- * <p>Policy, asset, edge, and decision 404 isolation cannot run here. Those endpoints are still on
- * the Module A, B, C, and D branches.
+ * <p>Cross-client 404 checks live in {@link ClientIsolationApiTest}.
  */
-@Import({ModuleEWebTest.CallerProbe.class, ModuleEWebTest.ProbeService.class})
+@Import({SecurityWebTest.CallerProbe.class, SecurityWebTest.ProbeService.class})
 class ClientApiTest extends ApiTestBase {
 
     @Autowired
@@ -87,7 +86,7 @@ class ClientApiTest extends ApiTestBase {
     }
 
     @Test
-    void secondClientGetsADifferentIdentity() {
+    void secondClientGetsDifferentIdentity() {
         Response other = registerAnotherClient();
         String otherId = other.jsonPath().getString("clientId");
         String otherKey = other.jsonPath().getString("apiKey");

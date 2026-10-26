@@ -1,7 +1,8 @@
 package com.licensegraph.security;
 
 /**
- * Request-thread storage for the authenticated client id. Cleared at the end of the filter.
+ * Request-thread storage for the authenticated client id. Cleared at the end of
+ * the filter.
  */
 final class ClientIdHolder {
 

@@ -9,9 +9,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.context.annotation.Import;
 
 /**
- * REST Assured checks that shared failures and unexpected failures use the error schema (E5, E8).
+ * REST Assured checks that shared failures and unexpected failures use the error
+ * schema (E5, E8).
  */
-@Import(ModuleEWebTest.ErrorProbe.class)
+@Import(SecurityWebTest.ErrorProbe.class)
 class ErrorHandlingApiTest extends ApiTestBase {
 
     @Test
@@ -41,6 +42,8 @@ class ErrorHandlingApiTest extends ApiTestBase {
                 .extract()
                 .asString();
 
-        assertThat(body).doesNotContain("db-password-should-not-leak").doesNotContain("IllegalStateException");
+        assertThat(body)
+                .doesNotContain("db-password-should-not-leak")
+                .doesNotContain("IllegalStateException");
     }
 }

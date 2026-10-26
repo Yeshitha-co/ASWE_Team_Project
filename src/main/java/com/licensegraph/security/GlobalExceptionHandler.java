@@ -17,7 +17,10 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 /**
- * Maps shared exceptions onto the Section 10 error body (E5). Controllers do not build error JSON.
+ * AI-assisted: Global error handling.
+ *
+ * <p>Maps shared exceptions onto the Section 10 error body (E5). Controllers do not
+ * build error JSON.
  *
  * <p>Unexpected failures return 500 with {@code INTERNAL_ERROR} and a fixed message. The exception
  * text is logged and is not copied into the response. {@code INTERNAL_ERROR} is not a Section 10
@@ -31,17 +34,22 @@ public class GlobalExceptionHandler {
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(ApiException.class)
-    public ResponseEntity<ApiError> handleApiException(ApiException exception, HttpServletRequest request) {
+    public ResponseEntity<ApiError> handleApiException(
+            ApiException exception, HttpServletRequest request) {
         return response(ApiErrorFactory.from(exception, request.getRequestURI()));
     }
 
+    /**
+     * Maps bean validation and unreadable JSON to 400 {@code VALIDATION_ERROR}.
+     */
     @ExceptionHandler({
             MethodArgumentNotValidException.class,
             ConstraintViolationException.class,
             HttpMessageNotReadableException.class,
             MethodArgumentTypeMismatchException.class
     })
-    public ResponseEntity<ApiError> handleValidation(Exception exception, HttpServletRequest request) {
+    public ResponseEntity<ApiError> handleValidation(
+            Exception exception, HttpServletRequest request) {
         ApiError body = ApiErrorFactory.of(
                 ErrorCode.VALIDATION_ERROR.status(),
                 ErrorCode.VALIDATION_ERROR.name(),
@@ -55,7 +63,8 @@ public class GlobalExceptionHandler {
      * Last resort for failures that are not one of the shared API exceptions.
      */
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiError> handleUnexpected(Exception exception, HttpServletRequest request) {
+    public ResponseEntity<ApiError> handleUnexpected(
+            Exception exception, HttpServletRequest request) {
         log.error("Unhandled exception on {}", request.getRequestURI(), exception);
         ApiError body = ApiErrorFactory.of(
                 HttpStatus.INTERNAL_SERVER_ERROR.value(),
