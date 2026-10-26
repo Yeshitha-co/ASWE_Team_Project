@@ -7,7 +7,8 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * {@code POST /api/clients} (E2). No API key is required, and no {@code clientId} is read from the body.
+ * {@code POST /api/clients} (E2). No API key is required, and no {@code clientId}
+ * is read from the body.
  */
 @RestController
 @RequestMapping("/api/clients")

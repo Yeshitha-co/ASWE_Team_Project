@@ -36,16 +36,18 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * API checks for client registration, the API-key filter, caller identity, and error mapping.
+ * AI-assisted: Web tests for registration, the API-key filter, and error mapping.
+ *
+ * <p>Checks client registration, caller identity, and the shared error body.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
 @Import({
-        ModuleEWebTest.CallerProbe.class,
-        ModuleEWebTest.ProbeService.class,
-        ModuleEWebTest.ErrorProbe.class
+        SecurityWebTest.CallerProbe.class,
+        SecurityWebTest.ProbeService.class,
+        SecurityWebTest.ErrorProbe.class
 })
-class ModuleEWebTest {
+class SecurityWebTest {
 
     @Autowired
     private MockMvc mockMvc;
@@ -89,7 +91,9 @@ class ModuleEWebTest {
                         .content("{\"clientId\":\"attacker\"}"))
                 .andExpect(status().isCreated())
                 .andReturn();
-        String createdId = objectMapper.readTree(result.getResponse().getContentAsString()).get("clientId").asText();
+        String createdId = objectMapper.readTree(result.getResponse().getContentAsString())
+                .get("clientId")
+                .asText();
 
         assertThat(createdId).isNotEqualTo("attacker");
     }
@@ -141,7 +145,8 @@ class ModuleEWebTest {
     @Test
     void eachErrorCodeMapsToItsStatusAndBody() throws Exception {
         for (ErrorCode code : ErrorCode.values()) {
-            mockMvc.perform(get("/api/test/errors/code/" + code.name()).header(ApiKeyFilter.HEADER, apiKey))
+            mockMvc.perform(get("/api/test/errors/code/" + code.name())
+                            .header(ApiKeyFilter.HEADER, apiKey))
                     .andExpect(status().is(code.status()))
                     .andExpect(jsonPath("$.status").value(code.status()))
                     .andExpect(jsonPath("$.code").value(code.name()))
@@ -163,11 +168,13 @@ class ModuleEWebTest {
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("ASSET_NOT_FOUND"));
 
-        mockMvc.perform(get("/api/test/errors/typed/bad-request").header(ApiKeyFilter.HEADER, apiKey))
+        mockMvc.perform(get("/api/test/errors/typed/bad-request")
+                        .header(ApiKeyFilter.HEADER, apiKey))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("INVALID_POLICY_COMBINATION"));
 
-        mockMvc.perform(get("/api/test/errors/typed/unprocessable").header(ApiKeyFilter.HEADER, apiKey))
+        mockMvc.perform(get("/api/test/errors/typed/unprocessable")
+                        .header(ApiKeyFilter.HEADER, apiKey))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.code").value("UNKNOWN_POLICY_REFERENCE"));
     }
@@ -233,7 +240,8 @@ class ModuleEWebTest {
     }
 
     /**
-     * Throws the shared exceptions so the advice can be checked without another module's controller.
+     * Throws the shared exceptions so the advice can be checked without another module's
+     * controller.
      */
     @RestController
     static class ErrorProbe {
@@ -255,7 +263,8 @@ class ModuleEWebTest {
                 case "not-found" -> throw NotFoundException.asset("dataset-A:v1");
                 case "bad-request" -> throw new BadRequestException(
                         ErrorCode.INVALID_POLICY_COMBINATION, "share-alike requires derivatives");
-                case "unprocessable" -> throw UnprocessableEntityException.unknownPolicy("license-A:v9");
+                case "unprocessable" -> throw UnprocessableEntityException.unknownPolicy(
+                        "license-A:v9");
                 case "unauthorized" -> throw UnauthorizedException.invalidApiKey();
                 default -> throw new IllegalArgumentException(kind);
             }
