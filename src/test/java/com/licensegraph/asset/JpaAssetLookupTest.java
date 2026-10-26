@@ -11,9 +11,7 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
 
 /**
- * Tests for {@link JpaAssetLookup} against in-memory H2 (Module B, task B5).
- *
- * <p>AI-assisted (Claude): tests drafted with Claude, reviewed by the Module B owner.
+ * AI-assisted: Tests for {@link JpaAssetLookup} against in-memory H2 (Module B, task B5).
  */
 @DataJpaTest
 @Import(JpaAssetLookup.class)
@@ -30,7 +28,8 @@ class JpaAssetLookupTest {
 
     @Test
     void findsOwnAssetAsView() {
-        repository.saveAndFlush(new Asset("client-1", DATASET_A_V1, AssetType.DATASET, LICENSE_A_V1, null));
+        repository.saveAndFlush(
+                new Asset("client-1", DATASET_A_V1, AssetType.DATASET, LICENSE_A_V1, null));
 
         assertThat(lookup.findAsset("client-1", DATASET_A_V1))
                 .contains(new AssetView(DATASET_A_V1, AssetType.DATASET, LICENSE_A_V1));
@@ -38,7 +37,8 @@ class JpaAssetLookupTest {
 
     @Test
     void missingAssetOrVersionIsEmpty() {
-        repository.saveAndFlush(new Asset("client-1", DATASET_A_V1, AssetType.DATASET, LICENSE_A_V1, null));
+        repository.saveAndFlush(
+                new Asset("client-1", DATASET_A_V1, AssetType.DATASET, LICENSE_A_V1, null));
 
         assertThat(lookup.findAsset("client-1", new AssetRef("dataset-A", 2))).isEmpty();
         assertThat(lookup.findAsset("client-1", new AssetRef("model-B", 1))).isEmpty();
@@ -46,22 +46,28 @@ class JpaAssetLookupTest {
 
     @Test
     void anotherClientsAssetIsEmpty() {
-        repository.saveAndFlush(new Asset("client-1", DATASET_A_V1, AssetType.DATASET, LICENSE_A_V1, null));
+        repository.saveAndFlush(
+                new Asset("client-1", DATASET_A_V1, AssetType.DATASET, LICENSE_A_V1, null));
 
         assertThat(lookup.findAsset("client-2", DATASET_A_V1)).isEmpty();
     }
 
     @Test
     void findsAssetsByExactPolicyVersionForCallerOnlyInOrder() {
-        repository.saveAndFlush(new Asset("client-1", new AssetRef("model-B", 1), AssetType.MODEL, LICENSE_A_V1, null));
-        repository.saveAndFlush(new Asset("client-1", new AssetRef("dataset-A", 2), AssetType.DATASET, LICENSE_A_V1, null));
-        repository.saveAndFlush(new Asset("client-1", DATASET_A_V1, AssetType.DATASET, LICENSE_A_V1, null));
+        AssetRef modelB = new AssetRef("model-B", 1);
+        AssetRef datasetAv2 = new AssetRef("dataset-A", 2);
+        repository.saveAndFlush(new Asset("client-1", modelB, AssetType.MODEL, LICENSE_A_V1, null));
+        repository.saveAndFlush(
+                new Asset("client-1", datasetAv2, AssetType.DATASET, LICENSE_A_V1, null));
+        repository.saveAndFlush(
+                new Asset("client-1", DATASET_A_V1, AssetType.DATASET, LICENSE_A_V1, null));
         repository.saveAndFlush(new Asset("client-1", new AssetRef("code-D", 1), AssetType.CODE,
                 new PolicyRef("license-A", 2), null));
-        repository.saveAndFlush(new Asset("client-2", DATASET_A_V1, AssetType.DATASET, LICENSE_A_V1, null));
+        repository.saveAndFlush(
+                new Asset("client-2", DATASET_A_V1, AssetType.DATASET, LICENSE_A_V1, null));
 
         assertThat(lookup.findAssetsByPolicy("client-1", LICENSE_A_V1))
                 .extracting(AssetView::ref)
-                .containsExactly(DATASET_A_V1, new AssetRef("dataset-A", 2), new AssetRef("model-B", 1));
+                .containsExactly(DATASET_A_V1, datasetAv2, modelB);
     }
 }

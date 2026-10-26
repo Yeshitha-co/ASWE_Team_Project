@@ -29,10 +29,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
 
 /**
- * Unit tests for {@link AssetService} with Mockito doubles for the repository and Module A's
- * {@link PolicyLookup} (Module B, tasks B2 to B4).
- *
- * <p>AI-assisted (Claude): tests drafted with Claude, reviewed by the Module B owner.
+ * AI-assisted: Unit tests for {@link AssetService} with Mockito doubles for the repository and
+ * Module A's {@link PolicyLookup} (Module B, tasks B2 to B4).
  */
 @ExtendWith(MockitoExtension.class)
 class AssetServiceTest {
@@ -61,8 +59,10 @@ class AssetServiceTest {
 
     @Test
     void registersValidAssetLinkedToExactPolicyVersion() {
-        when(repository.existsByClientIdAndAssetIdAndVersion(CLIENT, "dataset-A", 1)).thenReturn(false);
-        when(policyLookup.findPolicy(CLIENT, LICENSE_A_V1)).thenReturn(Optional.of(LICENSE_A_V1_VIEW));
+        when(repository.existsByClientIdAndAssetIdAndVersion(CLIENT, "dataset-A", 1))
+                .thenReturn(false);
+        when(policyLookup.findPolicy(CLIENT, LICENSE_A_V1))
+                .thenReturn(Optional.of(LICENSE_A_V1_VIEW));
         when(repository.saveAndFlush(any(Asset.class))).thenAnswer(call -> call.getArgument(0));
 
         AssetResponse response = service.register(CLIENT, datasetA("source: hub"));
@@ -82,7 +82,8 @@ class AssetServiceTest {
 
     @Test
     void acceptsKebabCaseDerivedDatasetType() {
-        when(policyLookup.findPolicy(CLIENT, LICENSE_A_V1)).thenReturn(Optional.of(LICENSE_A_V1_VIEW));
+        when(policyLookup.findPolicy(CLIENT, LICENSE_A_V1))
+                .thenReturn(Optional.of(LICENSE_A_V1_VIEW));
         when(repository.saveAndFlush(any(Asset.class))).thenAnswer(call -> call.getArgument(0));
 
         AssetResponse response = service.register(CLIENT,
@@ -93,7 +94,8 @@ class AssetServiceTest {
 
     @Test
     void unknownPolicyVersionGives422AndStoresNothing() {
-        when(policyLookup.findPolicy(CLIENT, new PolicyRef("license-A", 9))).thenReturn(Optional.empty());
+        when(policyLookup.findPolicy(CLIENT, new PolicyRef("license-A", 9)))
+                .thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.register(CLIENT,
                 new RegisterAssetRequest("dataset-A", 1, "dataset", "license-A", 9, null)))
@@ -107,7 +109,8 @@ class AssetServiceTest {
 
     @Test
     void repeatedAssetVersionGives409() {
-        when(repository.existsByClientIdAndAssetIdAndVersion(CLIENT, "dataset-A", 1)).thenReturn(true);
+        when(repository.existsByClientIdAndAssetIdAndVersion(CLIENT, "dataset-A", 1))
+                .thenReturn(true);
 
         assertThatThrownBy(() -> service.register(CLIENT, datasetA(null)))
                 .isInstanceOfSatisfying(ApiException.class, ex -> {
@@ -121,7 +124,8 @@ class AssetServiceTest {
 
     @Test
     void simultaneousDuplicateCaughtByUniqueConstraintGives409() {
-        when(policyLookup.findPolicy(CLIENT, LICENSE_A_V1)).thenReturn(Optional.of(LICENSE_A_V1_VIEW));
+        when(policyLookup.findPolicy(CLIENT, LICENSE_A_V1))
+                .thenReturn(Optional.of(LICENSE_A_V1_VIEW));
         when(repository.saveAndFlush(any(Asset.class)))
                 .thenThrow(new DataIntegrityViolationException("uk_assets_client_asset_version"));
 
@@ -141,22 +145,40 @@ class AssetServiceTest {
         verifyNoInteractions(repository, policyLookup);
     }
 
+    private static RegisterAssetRequest request(String assetId, Integer version, String type,
+            String policyId, Integer policyVersion, String metadata) {
+        return new RegisterAssetRequest(assetId, version, type, policyId, policyVersion, metadata);
+    }
+
     static Stream<Arguments> invalidRequests() {
         String tooLong = "x".repeat(AssetService.MAX_METADATA_LENGTH + 1);
         return Stream.of(
-                Arguments.of("missing assetId", new RegisterAssetRequest(null, 1, "dataset", "license-A", 1, null)),
-                Arguments.of("blank assetId", new RegisterAssetRequest("  ", 1, "dataset", "license-A", 1, null)),
-                Arguments.of("slash in assetId", new RegisterAssetRequest("my/model", 1, "model", "license-A", 1, null)),
-                Arguments.of("colon in assetId", new RegisterAssetRequest("model:v2", 1, "model", "license-A", 1, null)),
-                Arguments.of("space in assetId", new RegisterAssetRequest("my model", 1, "model", "license-A", 1, null)),
-                Arguments.of("missing version", new RegisterAssetRequest("dataset-A", null, "dataset", "license-A", 1, null)),
-                Arguments.of("zero version", new RegisterAssetRequest("dataset-A", 0, "dataset", "license-A", 1, null)),
-                Arguments.of("negative version", new RegisterAssetRequest("dataset-A", -1, "dataset", "license-A", 1, null)),
-                Arguments.of("missing type", new RegisterAssetRequest("dataset-A", 1, null, "license-A", 1, null)),
-                Arguments.of("missing policyId", new RegisterAssetRequest("dataset-A", 1, "dataset", null, 1, null)),
-                Arguments.of("missing policyVersion", new RegisterAssetRequest("dataset-A", 1, "dataset", "license-A", null, null)),
-                Arguments.of("zero policyVersion", new RegisterAssetRequest("dataset-A", 1, "dataset", "license-A", 0, null)),
-                Arguments.of("metadata too long", new RegisterAssetRequest("dataset-A", 1, "dataset", "license-A", 1, tooLong)),
+                Arguments.of("missing assetId",
+                        request(null, 1, "dataset", "license-A", 1, null)),
+                Arguments.of("blank assetId",
+                        request("  ", 1, "dataset", "license-A", 1, null)),
+                Arguments.of("slash in assetId",
+                        request("my/model", 1, "model", "license-A", 1, null)),
+                Arguments.of("colon in assetId",
+                        request("model:v2", 1, "model", "license-A", 1, null)),
+                Arguments.of("space in assetId",
+                        request("my model", 1, "model", "license-A", 1, null)),
+                Arguments.of("missing version",
+                        request("dataset-A", null, "dataset", "license-A", 1, null)),
+                Arguments.of("zero version",
+                        request("dataset-A", 0, "dataset", "license-A", 1, null)),
+                Arguments.of("negative version",
+                        request("dataset-A", -1, "dataset", "license-A", 1, null)),
+                Arguments.of("missing type",
+                        request("dataset-A", 1, null, "license-A", 1, null)),
+                Arguments.of("missing policyId",
+                        request("dataset-A", 1, "dataset", null, 1, null)),
+                Arguments.of("missing policyVersion",
+                        request("dataset-A", 1, "dataset", "license-A", null, null)),
+                Arguments.of("zero policyVersion",
+                        request("dataset-A", 1, "dataset", "license-A", 0, null)),
+                Arguments.of("metadata too long",
+                        request("dataset-A", 1, "dataset", "license-A", 1, tooLong)),
                 Arguments.of("no body", null));
     }
 
@@ -173,18 +195,22 @@ class AssetServiceTest {
 
     @Test
     void metadataAtMaximumLengthIsAccepted() {
-        when(policyLookup.findPolicy(CLIENT, LICENSE_A_V1)).thenReturn(Optional.of(LICENSE_A_V1_VIEW));
+        when(policyLookup.findPolicy(CLIENT, LICENSE_A_V1))
+                .thenReturn(Optional.of(LICENSE_A_V1_VIEW));
         when(repository.saveAndFlush(any(Asset.class))).thenAnswer(call -> call.getArgument(0));
 
         String metadata = "x".repeat(AssetService.MAX_METADATA_LENGTH);
 
-        assertThat(service.register(CLIENT, datasetA(metadata)).metadata()).hasSize(AssetService.MAX_METADATA_LENGTH);
+        assertThat(service.register(CLIENT, datasetA(metadata)).metadata())
+                .hasSize(AssetService.MAX_METADATA_LENGTH);
     }
 
     @Test
     void getReturnsStoredAsset() {
-        Asset stored = new Asset(CLIENT, new AssetRef("dataset-A", 1), AssetType.DATASET, LICENSE_A_V1, null);
-        when(repository.findByClientIdAndAssetIdAndVersion(CLIENT, "dataset-A", 1)).thenReturn(Optional.of(stored));
+        AssetRef datasetA = new AssetRef("dataset-A", 1);
+        Asset stored = new Asset(CLIENT, datasetA, AssetType.DATASET, LICENSE_A_V1, null);
+        when(repository.findByClientIdAndAssetIdAndVersion(CLIENT, "dataset-A", 1))
+                .thenReturn(Optional.of(stored));
 
         AssetResponse response = service.get(CLIENT, "dataset-A", 1);
 
@@ -194,7 +220,8 @@ class AssetServiceTest {
 
     @Test
     void getMissingAssetGives404() {
-        when(repository.findByClientIdAndAssetIdAndVersion(CLIENT, "dataset-A", 2)).thenReturn(Optional.empty());
+        when(repository.findByClientIdAndAssetIdAndVersion(CLIENT, "dataset-A", 2))
+                .thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.get(CLIENT, "dataset-A", 2))
                 .isInstanceOfSatisfying(ApiException.class, ex -> {

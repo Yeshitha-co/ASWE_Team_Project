@@ -31,13 +31,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 /**
- * Unit tests for {@link PolicyDerivationConflictChecker} (Module B, tasks B7 and B10).
+ * AI-assisted: Unit tests for {@link PolicyDerivationConflictChecker} (Module B, tasks B7 and B10).
  *
  * <p>Each test gives every asset its own policy ({@code license-<assetId>:v1}) and says which
  * policies forbid derivatives or AI training; everything else allows both. Graphs come from
  * {@link ConflictFixtures}, which mirror Module C's shared fixtures.
- *
- * <p>AI-assisted (Claude): tests drafted with Claude, reviewed by the Module B owner.
  */
 @ExtendWith(MockitoExtension.class)
 class PolicyDerivationConflictCheckerTest {
@@ -64,8 +62,8 @@ class PolicyDerivationConflictCheckerTest {
         });
         lenient().when(policies.findPolicy(anyString(), any(PolicyRef.class))).thenAnswer(call -> {
             PolicyRef ref = call.getArgument(1);
-            boolean[] flags = policyFlags.getOrDefault(ref.policyId().substring("license-".length()),
-                    new boolean[] {true, true});
+            String assetId = ref.policyId().substring("license-".length());
+            boolean[] flags = policyFlags.getOrDefault(assetId, new boolean[] {true, true});
             return Optional.of(new PolicyView(ref, true, true, flags[0], flags[1], false, false));
         });
     }
@@ -182,12 +180,14 @@ class PolicyDerivationConflictCheckerTest {
                         new DerivationInput(RIGHT, RelationType.MERGED_FROM)),
                 graphs(ConflictFixtures.ancestorsOfLeft(), ConflictFixtures.ancestorsOfRight()));
 
-        assertThat(conflicts).containsExactly(new PolicyConflict(BASE, policyOf(BASE), "derivatives"));
+        assertThat(conflicts).containsExactly(
+                new PolicyConflict(BASE, policyOf(BASE), "derivatives"));
     }
 
     @Test
     void aiTrainingOnlyChecksTheTrainedOnInputsUpstream() {
-        // right is trained-on, left is merged-from; base forbids AI training and is upstream of both.
+        // right is trained-on, left is merged-from; base forbids AI training and is upstream
+        // of both.
         forbid(BASE, false, true);
         forbid(LEFT, false, true);
 
@@ -196,8 +196,10 @@ class PolicyDerivationConflictCheckerTest {
                         new DerivationInput(RIGHT, RelationType.TRAINED_ON)),
                 graphs(ConflictFixtures.ancestorsOfLeft(), ConflictFixtures.ancestorsOfRight()));
 
-        // base is reached through the trained-on input; left is only upstream of the merged-from input.
-        assertThat(conflicts).containsExactly(new PolicyConflict(BASE, policyOf(BASE), "aiTraining"));
+        // base is reached through the trained-on input; left is only upstream of the
+        // merged-from input.
+        assertThat(conflicts).containsExactly(
+                new PolicyConflict(BASE, policyOf(BASE), "aiTraining"));
     }
 
     @Test

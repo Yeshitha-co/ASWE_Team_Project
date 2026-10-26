@@ -20,10 +20,8 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 /**
- * {@link AssetService} against the real H2 database, with Module A's {@link PolicyLookup}
- * mocked so that every policy version exists (Module B, tasks B3 and B4).
- *
- * <p>AI-assisted (Claude): tests drafted with Claude, reviewed by the Module B owner.
+ * AI-assisted: {@link AssetService} against the real H2 database, with Module A's
+ * {@link PolicyLookup} mocked so that every policy version exists (Module B, tasks B3 and B4).
  */
 @DataJpaTest
 @Import(AssetService.class)
@@ -37,14 +35,17 @@ class AssetServiceIntegrationTest {
 
     @BeforeEach
     void everyPolicyExists() {
-        when(policyLookup.findPolicy(anyString(), any(PolicyRef.class))).thenAnswer(call -> Optional.of(
-                new PolicyView(call.getArgument(1), true, true, true, true, false, false)));
+        when(policyLookup.findPolicy(anyString(), any(PolicyRef.class)))
+                .thenAnswer(call -> Optional.of(new PolicyView(
+                        call.getArgument(1), true, true, true, true, false, false)));
     }
 
     @Test
     void oldVersionIsUnchangedAfterNewVersionWithAnotherPolicy() {
-        service.register("client-1", new RegisterAssetRequest("dataset-A", 1, "dataset", "license-A", 1, "first"));
-        service.register("client-1", new RegisterAssetRequest("dataset-A", 2, "dataset", "license-A", 2, "second"));
+        service.register("client-1",
+                new RegisterAssetRequest("dataset-A", 1, "dataset", "license-A", 1, "first"));
+        service.register("client-1",
+                new RegisterAssetRequest("dataset-A", 2, "dataset", "license-A", 2, "second"));
 
         AssetResponse v1 = service.get("client-1", "dataset-A", 1);
         AssetResponse v2 = service.get("client-1", "dataset-A", 2);
@@ -56,7 +57,8 @@ class AssetServiceIntegrationTest {
 
     @Test
     void registeringSameVersionAgainKeepsOriginal() {
-        service.register("client-1", new RegisterAssetRequest("dataset-A", 1, "dataset", "license-A", 1, "first"));
+        service.register("client-1",
+                new RegisterAssetRequest("dataset-A", 1, "dataset", "license-A", 1, "first"));
 
         assertThatThrownBy(() -> service.register("client-1",
                 new RegisterAssetRequest("dataset-A", 1, "model", "license-B", 1, "second")))
@@ -70,7 +72,8 @@ class AssetServiceIntegrationTest {
 
     @Test
     void anotherClientsAssetGives404() {
-        service.register("client-1", new RegisterAssetRequest("dataset-A", 1, "dataset", "license-A", 1, null));
+        service.register("client-1",
+                new RegisterAssetRequest("dataset-A", 1, "dataset", "license-A", 1, null));
 
         assertThatThrownBy(() -> service.get("client-2", "dataset-A", 1))
                 .isInstanceOfSatisfying(ApiException.class, ex -> {
@@ -81,7 +84,8 @@ class AssetServiceIntegrationTest {
 
     @Test
     void anotherClientMayRegisterTheSameAssetVersion() {
-        service.register("client-1", new RegisterAssetRequest("dataset-A", 1, "dataset", "license-A", 1, null));
+        service.register("client-1",
+                new RegisterAssetRequest("dataset-A", 1, "dataset", "license-A", 1, null));
 
         AssetResponse other = service.register("client-2",
                 new RegisterAssetRequest("dataset-A", 1, "model", "license-B", 1, null));

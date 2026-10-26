@@ -22,23 +22,23 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 /**
- * Web-layer tests for {@link AssetController}: routes, status codes, JSON shape, and that the
- * client always comes from {@link ClientContext} (Module B, tasks B2 and B4).
+ * AI-assisted: Web-layer tests for {@link AssetController}: routes, status codes, JSON shape, and
+ * that the client always comes from {@link ClientContext} (Module B, tasks B2 and B4).
  *
  * <p>Error responses are produced by Module E's exception handler and are covered by the API
  * tests once it exists; {@link AssetServiceTest} checks which exception each error raises.
  *
  * <p>The API-key filter is switched off here ({@code addFilters = false}) because
  * {@link ClientContext} is mocked; authentication is tested by Module E.
- *
- * <p>AI-assisted (Claude): tests drafted with Claude, reviewed by the Module B owner.
  */
 @WebMvcTest(AssetController.class)
 @AutoConfigureMockMvc(addFilters = false)
 class AssetControllerTest {
 
-    private static final AssetResponse DATASET_A_V1 = new AssetResponse("dataset-A", 1, "dataset-A:v1",
-            AssetType.DATASET, "license-A", 1, "license-A:v1", null, Instant.parse("2026-10-21T14:03:11Z"));
+    private static final Instant CREATED_AT = Instant.parse("2026-10-21T14:03:11Z");
+
+    private static final AssetResponse DATASET_A_V1 = new AssetResponse("dataset-A", 1,
+            "dataset-A:v1", AssetType.DATASET, "license-A", 1, "license-A:v1", null, CREATED_AT);
 
     @Autowired
     private MockMvc mvc;
@@ -56,7 +56,8 @@ class AssetControllerTest {
 
     @Test
     void postRegistersAssetAndReturns201WithLocation() throws Exception {
-        RegisterAssetRequest request = new RegisterAssetRequest("dataset-A", 1, "dataset", "license-A", 1, null);
+        RegisterAssetRequest request =
+                new RegisterAssetRequest("dataset-A", 1, "dataset", "license-A", 1, null);
         when(assetService.register("client-1", request)).thenReturn(DATASET_A_V1);
 
         mvc.perform(post("/api/assets")
@@ -77,7 +78,8 @@ class AssetControllerTest {
 
     @Test
     void postIgnoresClientIdInBody() throws Exception {
-        RegisterAssetRequest request = new RegisterAssetRequest("dataset-A", 1, "dataset", "license-A", 1, null);
+        RegisterAssetRequest request =
+                new RegisterAssetRequest("dataset-A", 1, "dataset", "license-A", 1, null);
         when(assetService.register("client-1", request)).thenReturn(DATASET_A_V1);
 
         mvc.perform(post("/api/assets")
@@ -93,8 +95,8 @@ class AssetControllerTest {
 
     @Test
     void getReturnsAssetWithKebabCaseType() throws Exception {
-        AssetResponse derived = new AssetResponse("subset-E", 2, "subset-E:v2", AssetType.DERIVED_DATASET,
-                "license-A", 1, "license-A:v1", "filtered", Instant.parse("2026-10-21T14:03:11Z"));
+        AssetResponse derived = new AssetResponse("subset-E", 2, "subset-E:v2",
+                AssetType.DERIVED_DATASET, "license-A", 1, "license-A:v1", "filtered", CREATED_AT);
         when(assetService.get("client-1", "subset-E", 2)).thenReturn(derived);
 
         mvc.perform(get("/api/assets/subset-E/versions/2"))
