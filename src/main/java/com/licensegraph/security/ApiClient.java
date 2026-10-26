@@ -13,7 +13,8 @@ import java.time.Instant;
 @Entity
 @Table(
         name = "api_clients",
-        uniqueConstraints = @UniqueConstraint(name = "uk_api_clients_key_hash", columnNames = "key_hash"))
+        uniqueConstraints = @UniqueConstraint(
+                name = "uk_api_clients_key_hash", columnNames = "key_hash"))
 public class ApiClient {
 
     @Id
@@ -31,7 +32,8 @@ public class ApiClient {
     }
 
     /**
-     * Creates a client row. {@code keyHash} is the hex SHA-256 of the raw key, never the key itself.
+     * Creates a client row. {@code keyHash} is the hex SHA-256 of the raw key, never the key
+     * itself.
      */
     public ApiClient(String clientId, String keyHash, Instant createdAt) {
         this.clientId = clientId;
