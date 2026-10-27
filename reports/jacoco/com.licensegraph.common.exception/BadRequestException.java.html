@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>BadRequestException.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">LicenseGraph</a> &gt; <a href="index.source.html" class="el_package">com.licensegraph.common.exception</a> &gt; <span class="el_source">BadRequestException.java</span></div><h1>BadRequestException.java</h1><pre class="source lang-java linenums">package com.licensegraph.common.exception;
+
+import java.util.Map;
+
+/**
+ * HTTP 400 failures: validation, intended use, policy combination, or asset type.
+ */
+public class BadRequestException extends ApiException {
+
+    public BadRequestException(ErrorCode code, String message) {
+<span class="fc" id="L11">        this(code, message, Map.of());</span>
+<span class="fc" id="L12">    }</span>
+
+    public BadRequestException(ErrorCode code, String message, Map&lt;String, Object&gt; details) {
+<span class="fc" id="L15">        super(requireStatus(code, 400), message, details);</span>
+<span class="fc" id="L16">    }</span>
+
+    private static ErrorCode requireStatus(ErrorCode code, int status) {
+<span class="pc bpc" id="L19" title="1 of 2 branches missed.">        if (code.status() != status) {</span>
+<span class="nc" id="L20">            throw new IllegalArgumentException(code + &quot; is not a &quot; + status + &quot; code&quot;);</span>
+        }
+<span class="fc" id="L22">        return code;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

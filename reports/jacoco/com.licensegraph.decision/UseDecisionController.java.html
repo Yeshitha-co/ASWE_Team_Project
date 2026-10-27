@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>UseDecisionController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">LicenseGraph</a> &gt; <a href="index.source.html" class="el_package">com.licensegraph.decision</a> &gt; <span class="el_source">UseDecisionController.java</span></div><h1>UseDecisionController.java</h1><pre class="source lang-java linenums">
+package com.licensegraph.decision;
+
+import com.licensegraph.asset.AssetLookup;
+import com.licensegraph.common.AssetRef;
+import com.licensegraph.common.IntendedUse;
+import com.licensegraph.common.exception.BadRequestException;
+import com.licensegraph.common.exception.ErrorCode;
+import com.licensegraph.common.exception.NotFoundException;
+import com.licensegraph.security.ClientContext;
+import jakarta.validation.Valid;
+import java.util.List;
+import java.util.Map;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
+
+/**
+ * REST controller exposing Module D's use decision and audit history APIs.
+ *
+ * &lt;p&gt;Provides endpoints for evaluating and recording an intended use,
+ * retrieving a previously saved decision, and listing decision history
+ * for a specific asset version.
+ *
+ * &lt;p&gt;All operations are scoped to the authenticated client. The client
+ * identifier is obtained from {@link ClientContext}, which is populated
+ * by Module E's authentication mechanism. Client identifiers supplied
+ * by HTTP callers are not trusted.
+ *
+ * &lt;p&gt;AI-assisted: AI assistance was used to refine intended-use
+ * validation, integrate shared exception handling, implement
+ * client-scoped decision-history checks, and resolve Checkstyle warnings.
+ */
+@RestController
+@RequestMapping(&quot;/api/use-decisions&quot;)
+public class UseDecisionController {
+
+    private final UseDecisionService useDecisionService;
+    private final DecisionAuditStore decisionAuditStore;
+    private final AssetLookup assetLookup;
+    private final ClientContext clientContext;
+
+    /**
+     * Creates the controller with its service and security dependencies.
+     *
+     * @param useDecisionService evaluates and records requested uses
+     * @param decisionAuditStore retrieves previously recorded decisions
+     * @param assetLookup provides client-scoped asset lookups
+     * @param clientContext provides the authenticated client identifier
+     */
+    public UseDecisionController(
+            UseDecisionService useDecisionService,
+            DecisionAuditStore decisionAuditStore,
+            AssetLookup assetLookup,
+<span class="fc" id="L61">            ClientContext clientContext) {</span>
+
+<span class="fc" id="L63">        this.useDecisionService = useDecisionService;</span>
+<span class="fc" id="L64">        this.decisionAuditStore = decisionAuditStore;</span>
+<span class="fc" id="L65">        this.assetLookup = assetLookup;</span>
+<span class="fc" id="L66">        this.clientContext = clientContext;</span>
+<span class="fc" id="L67">    }</span>
+
+    /**
+     * Evaluates an intended asset use and saves the resulting decision.
+     *
+     * &lt;p&gt;Endpoint: POST /api/use-decisions
+     *
+     * &lt;p&gt;The request body identifies the asset version and intended use.
+     * The authenticated client identifier is resolved from ClientContext.
+     *
+     * &lt;p&gt;This operation creates a new audit record containing the
+     * evaluation result, generated decision ID, and timestamp.
+     *
+     * @param request validated asset version and intended use
+     * @return newly recorded use decision
+     */
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    public UseDecisionResponse createDecision(
+            @Valid @RequestBody CreateUseDecisionRequest request) {
+
+<span class="fc" id="L88">        String clientId = clientContext.currentClientId();</span>
+
+<span class="fc" id="L90">        AssetRef target = new AssetRef(</span>
+<span class="fc" id="L91">                request.assetId(),</span>
+<span class="fc" id="L92">                request.version());</span>
+
+<span class="fc" id="L94">        UseDecisionRecord record = useDecisionService.decideAndRecord(</span>
+                clientId,
+                target,
+<span class="fc" id="L97">                parseIntendedUse(request.intendedUse()));</span>
+
+<span class="fc" id="L99">        return UseDecisionResponse.from(record);</span>
+    }
+
+    /**
+     * Retrieves a previously saved decision by its identifier.
+     *
+     * &lt;p&gt;Endpoint: GET /api/use-decisions/{decisionId}
+     *
+     * &lt;p&gt;The lookup is restricted to the authenticated client.
+     * A missing decision, including one belonging to another client,
+     * results in a not-found exception.
+     *
+     * &lt;p&gt;This operation reads the existing audit record without
+     * re-evaluating the policies or modifying stored data.
+     *
+     * @param decisionId unique identifier of the recorded decision
+     * @return matching decision audit record
+     * @throws NotFoundException if no matching client-scoped decision exists
+     */
+    @GetMapping(&quot;/{decisionId}&quot;)
+    public UseDecisionResponse getDecision(
+            @PathVariable String decisionId) {
+
+<span class="fc" id="L122">        String clientId = clientContext.currentClientId();</span>
+
+<span class="fc" id="L124">        UseDecisionRecord record = decisionAuditStore.findById(clientId, decisionId)</span>
+<span class="fc" id="L125">                .orElseThrow(() -&gt; NotFoundException.decision(decisionId));</span>
+
+<span class="fc" id="L127">        return UseDecisionResponse.from(record);</span>
+    }
+
+    /**
+     * Retrieves saved decision history for an asset version.
+     *
+     * &lt;p&gt;Endpoint: GET /api/use-decisions?assetId=...&amp;version=...
+     *
+     * &lt;p&gt;Only returns decision history for assets accessible to the
+     * authenticated client. Requests for another client's asset
+     * return 404 DECISION_NOT_FOUND.
+     *
+     * &lt;p&gt;An accessible asset without recorded decisions returns
+     * an empty list.
+     *
+     * @param assetId identifier of the evaluated asset
+     * @param version version of the evaluated asset
+     * @return saved decisions matching the requested asset version
+     */
+    @GetMapping
+    public List&lt;UseDecisionResponse&gt; getDecisionHistory(
+            @RequestParam(required = false) String assetId,
+            @RequestParam(required = false) Integer version) {
+
+        // Validate request parameters before performing any database lookups.
+<span class="fc bfc" id="L152" title="All 4 branches covered.">        if (assetId == null || assetId.isBlank()) {</span>
+<span class="fc" id="L153">            throw validationError(&quot;assetId is required&quot;, &quot;assetId&quot;);</span>
+        }
+
+<span class="fc bfc" id="L156" title="All 4 branches covered.">        if (version == null || version &lt; 1) {</span>
+<span class="fc" id="L157">            throw validationError(&quot;version must be a positive integer&quot;, &quot;version&quot;);</span>
+        }
+
+<span class="fc" id="L160">        String clientId = clientContext.currentClientId();</span>
+<span class="fc" id="L161">        AssetRef target = new AssetRef(assetId, version);</span>
+
+        // AI-assisted: Enforce client isolation for decision-history access.
+        // A missing or inaccessible target must not return 200 with an empty list.
+<span class="fc bfc" id="L165" title="All 2 branches covered.">        if (assetLookup.findAsset(clientId, target).isEmpty()) {</span>
+<span class="fc" id="L166">            throw new NotFoundException(</span>
+                    ErrorCode.DECISION_NOT_FOUND,
+                    &quot;Decision history not found for asset: &quot; + target);
+        }
+
+<span class="fc" id="L171">        return decisionAuditStore.findByTarget(clientId, target)</span>
+<span class="fc" id="L172">                .stream()</span>
+<span class="fc" id="L173">                .map(UseDecisionResponse::from)</span>
+<span class="fc" id="L174">                .toList();</span>
+    }
+
+    /**
+     * AI-assisted: Converts the request's intended use to {@link IntendedUse}.
+     *
+     * @param value the JSON value, for example {@code ai-training}
+     * @return the matching intended use
+     * @throws BadRequestException {@code INVALID_INTENDED_USE} if the value is unknown
+     */
+    private static IntendedUse parseIntendedUse(String value) {
+        try {
+<span class="fc" id="L186">            return IntendedUse.fromJson(value);</span>
+<span class="fc" id="L187">        } catch (IllegalArgumentException ex) {</span>
+<span class="fc" id="L188">            throw new BadRequestException(</span>
+                    ErrorCode.INVALID_INTENDED_USE,
+                    &quot;Unknown intended use: &quot; + value
+                            + &quot; (expected commercial, redistribution, derivative, ai-training&quot;
+                            + &quot; or internal)&quot;,
+<span class="fc" id="L193">                    Map.of(&quot;field&quot;, &quot;intendedUse&quot;));</span>
+        }
+    }
+
+    /**
+     * Creates a shared validation error for an invalid request parameter.
+     *
+     * @param message explanation of the validation failure
+     * @param field name of the invalid request field
+     * @return validation exception with field details
+     */
+    private static BadRequestException validationError(
+            String message, String field) {
+
+<span class="fc" id="L207">        return new BadRequestException(</span>
+                ErrorCode.VALIDATION_ERROR,
+                message,
+<span class="fc" id="L210">                Map.of(&quot;field&quot;, field));</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

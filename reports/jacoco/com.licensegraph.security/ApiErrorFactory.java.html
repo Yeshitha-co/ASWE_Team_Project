@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ApiErrorFactory.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">LicenseGraph</a> &gt; <a href="index.source.html" class="el_package">com.licensegraph.security</a> &gt; <span class="el_source">ApiErrorFactory.java</span></div><h1>ApiErrorFactory.java</h1><pre class="source lang-java linenums">package com.licensegraph.security;
+
+import com.licensegraph.common.error.ApiError;
+import com.licensegraph.common.exception.ApiException;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.Map;
+
+/**
+ * AI-assisted: Error response construction.
+ *
+ * &lt;p&gt;Builds the Section 10 error body used by the exception handler and the API-key
+ * filter.
+ */
+final class ApiErrorFactory {
+
+    private ApiErrorFactory() {
+    }
+
+    static ApiError from(ApiException exception, String path) {
+<span class="fc" id="L21">        return of(</span>
+<span class="fc" id="L22">                exception.status(),</span>
+<span class="fc" id="L23">                exception.code().name(),</span>
+<span class="fc" id="L24">                exception.getMessage(),</span>
+                path,
+<span class="fc" id="L26">                exception.details());</span>
+    }
+
+    static ApiError of(
+            int status, String code, String message, String path, Map&lt;String, Object&gt; details) {
+<span class="fc bfc" id="L31" title="All 4 branches covered.">        Map&lt;String, Object&gt; bodyDetails = details == null || details.isEmpty() ? null : details;</span>
+<span class="fc" id="L32">        return new ApiError(</span>
+<span class="fc" id="L33">                Instant.now().truncatedTo(ChronoUnit.SECONDS),</span>
+                status,
+                code,
+                message,
+                path,
+                bodyDetails);
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

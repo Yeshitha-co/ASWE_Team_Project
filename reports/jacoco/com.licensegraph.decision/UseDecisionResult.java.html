@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>UseDecisionResult.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">LicenseGraph</a> &gt; <a href="index.source.html" class="el_package">com.licensegraph.decision</a> &gt; <span class="el_source">UseDecisionResult.java</span></div><h1>UseDecisionResult.java</h1><pre class="source lang-java linenums">package com.licensegraph.decision;
+
+import com.licensegraph.common.AssetRef;
+import com.licensegraph.common.Decision;
+import com.licensegraph.common.IntendedUse;
+import com.licensegraph.common.Obligation;
+import com.licensegraph.common.PolicyRef;
+import java.util.List;
+
+/**
+ * ALLOW or DENY outcome for an intended use, with blockers and obligations
+ * (Section 10, Module D).
+ *
+ * &lt;p&gt;Contains the target asset, intended use, final decision,
+ * blocking paths, evaluated policies, and associated obligations.
+ *
+ * &lt;p&gt;AI-assisted: AI assistance was used to review and document
+ * the decision result structure and improve code clarity.
+ *
+ * @param target asset being evaluated
+ * @param use intended use being evaluated
+ * @param decision final ALLOW or DENY outcome
+ * @param blockingPaths paths explaining which policies block the use
+ * @param evaluatedPolicies policy versions considered during evaluation
+ * @param obligations license obligations associated with the evaluation
+ */
+<span class="fc" id="L27">public record UseDecisionResult(</span>
+        AssetRef target,
+        IntendedUse use,
+        Decision decision,
+        List&lt;BlockingPath&gt; blockingPaths,
+        List&lt;PolicyRef&gt; evaluatedPolicies,
+        List&lt;Obligation&gt; obligations) {
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

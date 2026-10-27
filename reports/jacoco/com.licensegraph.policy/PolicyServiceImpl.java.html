@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PolicyServiceImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">LicenseGraph</a> &gt; <a href="index.source.html" class="el_package">com.licensegraph.policy</a> &gt; <span class="el_source">PolicyServiceImpl.java</span></div><h1>PolicyServiceImpl.java</h1><pre class="source lang-java linenums">
+package com.licensegraph.policy;
+
+import com.licensegraph.common.PolicyRef;
+import com.licensegraph.common.exception.BadRequestException;
+import com.licensegraph.common.exception.ConflictException;
+import com.licensegraph.common.exception.ErrorCode;
+import com.licensegraph.common.exception.NotFoundException;
+import java.util.List;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+/**
+ * Implements license policy creation and retrieval operations.
+ */
+@Service
+@Transactional
+public class PolicyServiceImpl implements PolicyService {
+
+    private final LicensePolicyRepository repository;
+
+<span class="fc" id="L22">    public PolicyServiceImpl(LicensePolicyRepository repository) {</span>
+<span class="fc" id="L23">        this.repository = repository;</span>
+<span class="fc" id="L24">    }</span>
+
+    @Override
+    public LicensePolicy createPolicy(String clientId, LicensePolicy policy) {
+<span class="pc bpc" id="L28" title="1 of 4 branches missed.">        if (policy.isShareAlike() &amp;&amp; !policy.isDerivatives()) {</span>
+<span class="fc" id="L29">            throw new BadRequestException(</span>
+                    ErrorCode.INVALID_POLICY_COMBINATION,
+                    &quot;A policy requiring share-alike must allow derivatives&quot;);
+        }
+
+<span class="fc bfc" id="L34" title="All 2 branches covered.">        if (repository.existsByClientIdAndPolicyIdAndVersion(</span>
+<span class="fc" id="L35">                clientId, policy.getPolicyId(), policy.getVersion())) {</span>
+<span class="fc" id="L36">            throw ConflictException.duplicatePolicyVersion(</span>
+<span class="fc" id="L37">                    policy.getPolicyId() + &quot;:v&quot; + policy.getVersion());</span>
+        }
+
+<span class="fc" id="L40">        LicensePolicy clientPolicy = new LicensePolicy(</span>
+                clientId,
+<span class="fc" id="L42">                policy.getPolicyId(),</span>
+<span class="fc" id="L43">                policy.getVersion(),</span>
+<span class="fc" id="L44">                policy.isCommercialUse(),</span>
+<span class="fc" id="L45">                policy.isRedistribution(),</span>
+<span class="fc" id="L46">                policy.isDerivatives(),</span>
+<span class="fc" id="L47">                policy.isAiTraining(),</span>
+<span class="fc" id="L48">                policy.isAttributionRequired(),</span>
+<span class="fc" id="L49">                policy.isShareAlike());</span>
+
+<span class="fc" id="L51">        return repository.save(clientPolicy);</span>
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List&lt;LicensePolicy&gt; findPolicyVersions(String clientId, String policyId) {
+<span class="fc" id="L57">        List&lt;LicensePolicy&gt; policies =</span>
+<span class="fc" id="L58">                repository.findByClientIdAndPolicyIdOrderByVersionAsc(clientId, policyId);</span>
+
+<span class="fc bfc" id="L60" title="All 2 branches covered.">        if (policies.isEmpty()) {</span>
+<span class="fc" id="L61">            throw NotFoundException.policy(policyId);</span>
+        }
+
+<span class="fc" id="L64">        return policies;</span>
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public LicensePolicy findPolicyVersion(String clientId, PolicyRef ref) {
+<span class="fc" id="L70">        return repository.findByClientIdAndPolicyIdAndVersion(</span>
+<span class="fc" id="L71">                        clientId, ref.policyId(), ref.version())</span>
+<span class="fc" id="L72">                .orElseThrow(() -&gt; NotFoundException.policy(ref.toString()));</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

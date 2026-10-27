@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>LineageQueryServiceImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">LicenseGraph</a> &gt; <a href="index.source.html" class="el_package">com.licensegraph.lineage</a> &gt; <span class="el_source">LineageQueryServiceImpl.java</span></div><h1>LineageQueryServiceImpl.java</h1><pre class="source lang-java linenums">package com.licensegraph.lineage;
+
+import com.licensegraph.asset.AssetLookup;
+import com.licensegraph.common.AssetRef;
+import com.licensegraph.common.LineageEdge;
+import com.licensegraph.common.LineageGraph;
+import com.licensegraph.common.exception.ErrorCode;
+import com.licensegraph.common.exception.NotFoundException;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Deque;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+/**
+ * AI-assisted: Answers ancestry and descendant queries by breadth-first search over stored edges
+ * (C6).
+ *
+ * &lt;p&gt;Each asset is visited once, so a shared ancestor in a diamond appears once in the result.
+ * Every lookup is scoped to the caller's client.
+ */
+
+@Service
+public class LineageQueryServiceImpl implements LineageQueryService {
+
+    private final DerivationEdgeRepository edges;
+    private final AssetLookup assets;
+
+<span class="fc" id="L32">    public LineageQueryServiceImpl(DerivationEdgeRepository edges, AssetLookup assets) {</span>
+<span class="fc" id="L33">        this.edges = edges;</span>
+<span class="fc" id="L34">        this.assets = assets;</span>
+<span class="fc" id="L35">    }</span>
+
+    @Override
+    @Transactional(readOnly = true)
+    public LineageGraph findAncestors(String clientId, AssetRef target) {
+<span class="fc" id="L40">        requireAsset(clientId, target);</span>
+<span class="fc" id="L41">        return walk(clientId, target, true);</span>
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public LineageGraph findDescendants(String clientId, AssetRef source) {
+<span class="fc" id="L47">        requireAsset(clientId, source);</span>
+<span class="fc" id="L48">        return walk(clientId, source, false);</span>
+    }
+
+    /**
+     * Throws 404 ASSET_NOT_FOUND when the asset is unknown or belongs to another client.
+     */
+    private void requireAsset(String clientId, AssetRef ref) {
+<span class="fc bfc" id="L55" title="All 2 branches covered.">        if (assets.findAsset(clientId, ref).isEmpty()) {</span>
+<span class="fc" id="L56">            throw new NotFoundException(ErrorCode.ASSET_NOT_FOUND, &quot;Asset not found: &quot; + ref);</span>
+        }
+<span class="fc" id="L58">    }</span>
+
+    /**
+     * Breadth-first walk from the root. Upward follows output to input (ancestors);
+     * downward follows input to output (descendants). The root is included in the nodes.
+     */
+    private LineageGraph walk(String clientId, AssetRef root, boolean upward) {
+<span class="fc" id="L65">        Set&lt;AssetRef&gt; visited = new LinkedHashSet&lt;&gt;();</span>
+<span class="fc" id="L66">        List&lt;LineageEdge&gt; found = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L67">        Deque&lt;AssetRef&gt; queue = new ArrayDeque&lt;&gt;();</span>
+
+<span class="fc" id="L69">        visited.add(root);</span>
+<span class="fc" id="L70">        queue.add(root);</span>
+
+<span class="fc bfc" id="L72" title="All 2 branches covered.">        while (!queue.isEmpty()) {</span>
+<span class="fc" id="L73">            AssetRef current = queue.poll();</span>
+<span class="fc bfc" id="L74" title="All 2 branches covered.">            for (DerivationEdge edge : neighbours(clientId, current, upward)) {</span>
+<span class="fc" id="L75">                found.add(edge.toLineageEdge());</span>
+<span class="fc bfc" id="L76" title="All 2 branches covered.">                AssetRef next = upward ? edge.input() : edge.output();</span>
+<span class="fc bfc" id="L77" title="All 2 branches covered.">                if (visited.add(next)) {</span>
+<span class="fc" id="L78">                    queue.add(next);</span>
+                }
+<span class="fc" id="L80">            }</span>
+<span class="fc" id="L81">        }</span>
+<span class="fc" id="L82">        return new LineageGraph(root, visited, found);</span>
+    }
+
+    /**
+     * Direct parents when walking up, direct children when walking down.
+     */
+    private List&lt;DerivationEdge&gt; neighbours(String clientId, AssetRef node, boolean upward) {
+<span class="fc bfc" id="L89" title="All 2 branches covered.">        if (upward) {</span>
+<span class="fc" id="L90">            return edges.findByClientIdAndOutputAssetIdAndOutputVersion(</span>
+<span class="fc" id="L91">                    clientId, node.assetId(), node.version());</span>
+        }
+<span class="fc" id="L93">        return edges.findByClientIdAndInputAssetIdAndInputVersion(</span>
+<span class="fc" id="L94">                clientId, node.assetId(), node.version());</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ApiKeyGenerator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">LicenseGraph</a> &gt; <a href="index.source.html" class="el_package">com.licensegraph.security</a> &gt; <span class="el_source">ApiKeyGenerator.java</span></div><h1>ApiKeyGenerator.java</h1><pre class="source lang-java linenums">package com.licensegraph.security;
+
+import java.security.SecureRandom;
+import java.util.Base64;
+import org.springframework.stereotype.Component;
+
+/**
+ * Creates API keys from a cryptographic random source (E2).
+ */
+@Component
+<span class="fc" id="L11">public class ApiKeyGenerator {</span>
+
+    private static final int KEY_BYTES = 32;
+
+<span class="fc" id="L15">    private final SecureRandom random = new SecureRandom();</span>
+
+    /**
+     * Returns a URL-safe key. The caller shows it once; only its hash is stored.
+     */
+    public String generate() {
+<span class="fc" id="L21">        byte[] bytes = new byte[KEY_BYTES];</span>
+<span class="fc" id="L22">        random.nextBytes(bytes);</span>
+<span class="fc" id="L23">        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

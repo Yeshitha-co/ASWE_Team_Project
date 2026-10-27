@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DerivationRequest.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">LicenseGraph</a> &gt; <a href="index.source.html" class="el_package">com.licensegraph.lineage</a> &gt; <span class="el_source">DerivationRequest.java</span></div><h1>DerivationRequest.java</h1><pre class="source lang-java linenums">package com.licensegraph.lineage;
+
+import com.licensegraph.common.AssetRef;
+import com.licensegraph.common.DerivationInput;
+import com.licensegraph.common.RelationType;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+import java.util.List;
+
+/**
+ * AI-assisted: JSON body for POST /api/derivations: one output and one or more inputs (C2).
+ * Bean Validation rejects missing or malformed fields with 400 before the service runs.
+ */
+<span class="fc" id="L17">public record DerivationRequest(</span>
+        @NotNull @Valid AssetBody output,
+        @NotEmpty List&lt;@NotNull @Valid InputBody&gt; inputs) {
+
+    /**
+     * An asset reference as it appears in the request body.
+     */
+<span class="fc" id="L24">    public record AssetBody(@NotBlank String assetId, @NotNull @Positive Integer version) {</span>
+        public AssetRef toRef() {
+<span class="fc" id="L26">            return new AssetRef(assetId, version);</span>
+        }
+    }
+
+    /**
+     * One input asset plus how the output was derived from it.
+     */
+<span class="fc" id="L33">    public record InputBody(@NotBlank String assetId,</span>
+                            @NotNull @Positive Integer version,
+                            @NotNull RelationType relation) {
+        public DerivationInput toInput() {
+<span class="fc" id="L37">            return new DerivationInput(new AssetRef(assetId, version), relation);</span>
+        }
+    }
+
+    /**
+     * Converts the request inputs into the shared records the service expects.
+     */
+    public List&lt;DerivationInput&gt; toInputs() {
+<span class="fc" id="L45">        return inputs.stream().map(InputBody::toInput).toList();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

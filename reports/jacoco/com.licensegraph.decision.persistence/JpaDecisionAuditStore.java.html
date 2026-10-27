@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>JpaDecisionAuditStore.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">LicenseGraph</a> &gt; <a href="index.source.html" class="el_package">com.licensegraph.decision.persistence</a> &gt; <span class="el_source">JpaDecisionAuditStore.java</span></div><h1>JpaDecisionAuditStore.java</h1><pre class="source lang-java linenums">
+package com.licensegraph.decision.persistence;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.licensegraph.common.AssetRef;
+import com.licensegraph.decision.DecisionAuditStore;
+import com.licensegraph.decision.UseDecisionRecord;
+import com.licensegraph.decision.UseDecisionResult;
+import java.time.Instant;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+import org.springframework.stereotype.Repository;
+/**
+ * JPA-backed implementation of the decision audit store for Module D.
+ *
+ * &lt;p&gt;Persists evaluated use decisions as append-only audit records.
+ * Each saved decision receives a unique identifier and evaluation
+ * timestamp. The complete evaluation result is serialized as JSON
+ * so that blocking paths, evaluated policies, and obligations can
+ * be reconstructed when the record is retrieved.
+ *
+ * &lt;p&gt;All retrieval operations are scoped to the requesting client
+ * to prevent access to another client's decision history.
+ *
+ * &lt;p&gt;AI-assisted: AI assistance was used to review the audit
+ * persistence implementation, improve documentation, and resolve
+ *
+ */
+
+@Repository
+public class JpaDecisionAuditStore implements DecisionAuditStore {
+
+    private final DecisionAuditRepository repository;
+    private final ObjectMapper objectMapper;
+
+    /**
+     * Creates an audit store backed by a JPA repository.
+     *
+     * @param repository database access for audit entities
+     * @param objectMapper converts decision results to and from JSON
+     */
+    public JpaDecisionAuditStore(
+            DecisionAuditRepository repository,
+<span class="fc" id="L46">            ObjectMapper objectMapper) {</span>
+
+<span class="fc" id="L48">        this.repository = repository;</span>
+<span class="fc" id="L49">        this.objectMapper = objectMapper;</span>
+<span class="fc" id="L50">    }</span>
+
+    /**
+     * Creates and persists a new audit record for an evaluated decision.
+     *
+     * &lt;p&gt;Generates a unique decision ID and evaluation timestamp,
+     * serializes the complete result, and stores it in the database.
+     * Existing records are not modified by this method.
+     *
+     * @param clientId authenticated client identifier
+     * @param result completed evaluation result
+     * @return saved record containing its ID, timestamp, and result
+     * @throws IllegalStateException if result serialization fails
+     */
+    @Override
+    public UseDecisionRecord save(
+            String clientId,
+            UseDecisionResult result) {
+
+        // Create identifiers for a new audit event.
+<span class="fc" id="L70">        String decisionId = UUID.randomUUID().toString();</span>
+<span class="fc" id="L71">        Instant evaluatedAt = Instant.now();</span>
+
+        // Preserve the complete evaluation result as JSON.
+<span class="fc" id="L74">        String resultJson = toJson(result);</span>
+
+<span class="fc" id="L76">        DecisionAuditEntity entity = new DecisionAuditEntity(</span>
+                decisionId,
+                clientId,
+<span class="fc" id="L79">                result.target().assetId(),</span>
+<span class="fc" id="L80">                result.target().version(),</span>
+                evaluatedAt,
+                resultJson
+        );
+
+<span class="fc" id="L85">        repository.save(entity);</span>
+
+<span class="fc" id="L87">        return new UseDecisionRecord(</span>
+                decisionId,
+                evaluatedAt,
+                result
+        );
+    }
+
+    /**
+     * Retrieves a saved decision by its ID within a client's scope.
+     *
+     * @param clientId authenticated client identifier
+     * @param decisionId unique identifier of the saved decision
+     * @return the matching record, or an empty Optional if not found
+     */
+    @Override
+    public Optional&lt;UseDecisionRecord&gt; findById(
+            String clientId,
+            String decisionId) {
+
+        // Include clientId in the lookup to enforce client isolation.
+<span class="fc" id="L107">        return repository</span>
+<span class="fc" id="L108">                .findByDecisionIdAndClientId(decisionId, clientId)</span>
+<span class="fc" id="L109">                .map(this::toRecord);</span>
+    }
+
+    /**
+     * Retrieves the audit history for a specific asset version.
+     *
+     * &lt;p&gt;Only decisions belonging to the supplied client and exact
+     * asset version are included.
+     *
+     * @param clientId authenticated client identifier
+     * @param target asset version whose history is requested
+     * @return matching audit records
+     */
+    @Override
+    public List&lt;UseDecisionRecord&gt; findByTarget(
+            String clientId,
+            AssetRef target) {
+
+<span class="fc" id="L127">        return repository</span>
+<span class="fc" id="L128">                .findByClientIdAndAssetIdAndAssetVersion(</span>
+                        clientId,
+<span class="fc" id="L130">                        target.assetId(),</span>
+<span class="fc" id="L131">                        target.version()</span>
+                )
+<span class="fc" id="L133">                .stream()</span>
+<span class="fc" id="L134">                .map(this::toRecord)</span>
+<span class="fc" id="L135">                .toList();</span>
+    }
+
+    /**
+     * Serializes an evaluation result for database storage.
+     *
+     * @param result decision result to serialize
+     * @return JSON representation of the result
+     * @throws IllegalStateException if Jackson cannot serialize the result
+     */
+    private String toJson(UseDecisionResult result) {
+        try {
+<span class="fc" id="L147">            return objectMapper.writeValueAsString(result);</span>
+<span class="nc" id="L148">        } catch (JsonProcessingException e) {</span>
+<span class="nc" id="L149">            throw new IllegalStateException(</span>
+                    &quot;Failed to serialize decision result&quot;, e
+            );
+        }
+    }
+
+    /**
+     * Reconstructs a decision record from a stored database entity.
+     *
+     * @param entity persisted audit entity containing the JSON result
+     * @return decision record reconstructed from database fields
+     * @throws IllegalStateException if Jackson cannot deserialize the result
+     */
+    private UseDecisionRecord toRecord(DecisionAuditEntity entity) {
+        try {
+<span class="fc" id="L164">            UseDecisionResult result = objectMapper.readValue(</span>
+<span class="fc" id="L165">                    entity.getResultJson(),</span>
+                    UseDecisionResult.class
+            );
+
+<span class="fc" id="L169">            return new UseDecisionRecord(</span>
+<span class="fc" id="L170">                    entity.getDecisionId(),</span>
+<span class="fc" id="L171">                    entity.getEvaluatedAt(),</span>
+                    result
+            );
+
+<span class="nc" id="L175">        } catch (JsonProcessingException e) {</span>
+<span class="nc" id="L176">            throw new IllegalStateException(</span>
+                    &quot;Failed to deserialize decision result&quot;, e
+            );
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>
