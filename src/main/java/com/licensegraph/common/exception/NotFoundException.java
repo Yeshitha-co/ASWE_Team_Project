@@ -12,15 +12,18 @@ public class NotFoundException extends ApiException {
     }
 
     public static NotFoundException asset(String clientScopedName) {
-        return new NotFoundException(ErrorCode.ASSET_NOT_FOUND, "Asset not found: " + clientScopedName);
+        return new NotFoundException(
+                ErrorCode.ASSET_NOT_FOUND, "Asset not found: " + clientScopedName);
     }
 
     public static NotFoundException policy(String clientScopedName) {
-        return new NotFoundException(ErrorCode.POLICY_NOT_FOUND, "Policy not found: " + clientScopedName);
+        return new NotFoundException(
+                ErrorCode.POLICY_NOT_FOUND, "Policy not found: " + clientScopedName);
     }
 
     public static NotFoundException decision(String decisionId) {
-        return new NotFoundException(ErrorCode.DECISION_NOT_FOUND, "Decision not found: " + decisionId);
+        return new NotFoundException(
+                ErrorCode.DECISION_NOT_FOUND, "Decision not found: " + decisionId);
     }
 
     private static ErrorCode require404(ErrorCode code) {

@@ -36,12 +36,6 @@ The following examples illustrate the types of prompts used during development. 
 - "Explain the trade-offs between these implementation approaches and how they affect the other modules."
 - "What edge cases should be considered when implementing this functionality?"
 
-These are requests actually given for Module E. They are not a full transcript.
-
-- Implement Module E from the work plan: register a client at `POST /api/clients` with a random API key whose SHA-256 hash is the only stored secret, require `X-API-Key` everywhere else, and map shared exceptions to the Section 10 error body.
-- Add a REST Assured base that registers a caller, then cross-client tests: another client's policy, asset, edge, or decision is 404, a body that names something outside the caller is 422, and a missing or unknown key is 401.
-- Fix the remaining Module E Checkstyle violations, including tests, without changing behavior and without reformatting Modules A–D.
-
 ## 4. Identification of AI-Assisted Code
 
 AI-generated or AI-assisted code, including test code, is identified in the relevant source files using comments such as:

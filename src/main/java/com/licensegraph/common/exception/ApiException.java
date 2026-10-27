@@ -15,6 +15,7 @@ public class ApiException extends RuntimeException {
         this(code, message, Map.of());
     }
 
+    /** Stores the code and message, and freezes {@code details} (empty when null). */
     public ApiException(ErrorCode code, String message, Map<String, Object> details) {
         super(message);
         this.code = code;

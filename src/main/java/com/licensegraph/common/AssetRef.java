@@ -8,6 +8,7 @@ package com.licensegraph.common;
  */
 public record AssetRef(String assetId, int version) {
 
+    /** Requires a non-blank asset id and a version of at least 1, then trims the id. */
     public AssetRef {
         if (assetId == null || assetId.isBlank()) {
             throw new IllegalArgumentException("assetId is required");

@@ -14,6 +14,7 @@ public final class EnumJson {
         return value.name().toLowerCase(Locale.ROOT).replace('_', '-');
     }
 
+    /** Parses a kebab-case token into the enum, rejecting blank and unknown values. */
     public static <E extends Enum<E>> E fromKebab(Class<E> type, String value) {
         if (value == null || value.isBlank()) {
             throw new IllegalArgumentException(type.getSimpleName() + " is required");
@@ -22,7 +23,8 @@ public final class EnumJson {
         try {
             return Enum.valueOf(type, normalized);
         } catch (IllegalArgumentException ex) {
-            throw new IllegalArgumentException("Unknown " + type.getSimpleName() + " value: " + value, ex);
+            throw new IllegalArgumentException(
+                    "Unknown " + type.getSimpleName() + " value: " + value, ex);
         }
     }
 }

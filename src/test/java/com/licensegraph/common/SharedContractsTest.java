@@ -49,13 +49,18 @@ class SharedContractsTest {
 
     @Test
     void enumsUseKebabCaseJson() throws Exception {
-        assertThat(mapper.writeValueAsString(IntendedUse.AI_TRAINING)).isEqualTo("\"ai-training\"");
-        assertThat(mapper.writeValueAsString(RelationType.FINE_TUNED_FROM)).isEqualTo("\"fine-tuned-from\"");
-        assertThat(mapper.writeValueAsString(AssetType.DERIVED_DATASET)).isEqualTo("\"derived-dataset\"");
+        assertThat(mapper.writeValueAsString(IntendedUse.AI_TRAINING))
+                .isEqualTo("\"ai-training\"");
+        assertThat(mapper.writeValueAsString(RelationType.FINE_TUNED_FROM))
+                .isEqualTo("\"fine-tuned-from\"");
+        assertThat(mapper.writeValueAsString(AssetType.DERIVED_DATASET))
+                .isEqualTo("\"derived-dataset\"");
         assertThat(mapper.writeValueAsString(Decision.DENY)).isEqualTo("\"deny\"");
-        assertThat(mapper.writeValueAsString(ObligationType.SHARE_ALIKE)).isEqualTo("\"share-alike\"");
+        assertThat(mapper.writeValueAsString(ObligationType.SHARE_ALIKE))
+                .isEqualTo("\"share-alike\"");
 
-        assertThat(mapper.readValue("\"ai-training\"", IntendedUse.class)).isEqualTo(IntendedUse.AI_TRAINING);
+        assertThat(mapper.readValue("\"ai-training\"", IntendedUse.class))
+                .isEqualTo(IntendedUse.AI_TRAINING);
         assertThat(mapper.readValue("\"fine-tuned-from\"", RelationType.class))
                 .isEqualTo(RelationType.FINE_TUNED_FROM);
     }
@@ -65,10 +70,14 @@ class SharedContractsTest {
         AssetRef asset = new AssetRef("model-C", 1);
         PolicyRef policy = new PolicyRef("license-A", 1);
 
-        assertThat(mapper.writeValueAsString(asset)).isEqualTo("{\"assetId\":\"model-C\",\"version\":1}");
-        assertThat(mapper.writeValueAsString(policy)).isEqualTo("{\"policyId\":\"license-A\",\"version\":1}");
-        assertThat(mapper.readValue("{\"assetId\":\"model-C\",\"version\":1}", AssetRef.class)).isEqualTo(asset);
-        assertThat(mapper.readValue("{\"policyId\":\"license-A\",\"version\":1}", PolicyRef.class)).isEqualTo(policy);
+        assertThat(mapper.writeValueAsString(asset))
+                .isEqualTo("{\"assetId\":\"model-C\",\"version\":1}");
+        assertThat(mapper.writeValueAsString(policy))
+                .isEqualTo("{\"policyId\":\"license-A\",\"version\":1}");
+        assertThat(mapper.readValue("{\"assetId\":\"model-C\",\"version\":1}", AssetRef.class))
+                .isEqualTo(asset);
+        assertThat(mapper.readValue("{\"policyId\":\"license-A\",\"version\":1}", PolicyRef.class))
+                .isEqualTo(policy);
     }
 
     @Test
@@ -111,7 +120,8 @@ class SharedContractsTest {
                 "CYCLE_DETECTED",
                 "Edge dataset-A:v1 -> model-C:v1 would create a cycle",
                 "/api/derivations",
-                Map.of("cyclePath", List.of("dataset-A:v1", "model-C:v1", "model-B:v1", "dataset-A:v1")));
+                Map.of("cyclePath", List.of(
+                        "dataset-A:v1", "model-C:v1", "model-B:v1", "dataset-A:v1")));
 
         String json = mapper.writeValueAsString(error);
         assertThat(json).contains("\"timestamp\":\"2026-10-21T14:03:11Z\"");
