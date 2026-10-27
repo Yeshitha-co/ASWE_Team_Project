@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>LicensePolicy.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">LicenseGraph</a> &gt; <a href="index.source.html" class="el_package">com.licensegraph.policy</a> &gt; <span class="el_source">LicensePolicy.java</span></div><h1>LicensePolicy.java</h1><pre class="source lang-java linenums">
+package com.licensegraph.policy;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
+
+/**
+ * Represents a license policy and its permissions for a specific client and version.
+ */
+@Entity
+@Table(
+        name = &quot;license_policies&quot;,
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = &quot;uk_policy_client_policy_version&quot;,
+                        columnNames = {&quot;client_id&quot;, &quot;policy_id&quot;, &quot;version&quot;}
+                )
+        }
+)
+public class LicensePolicy {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = &quot;client_id&quot;, nullable = false, length = 100)
+    private String clientId;
+
+    @Column(name = &quot;policy_id&quot;, nullable = false, length = 100)
+    private String policyId;
+
+    @Column(name = &quot;version&quot;, nullable = false)
+    private int version;
+
+    @Column(name = &quot;commercial_use&quot;, nullable = false)
+    private boolean commercialUse;
+
+    @Column(name = &quot;redistribution&quot;, nullable = false)
+    private boolean redistribution;
+
+    @Column(name = &quot;derivatives&quot;, nullable = false)
+    private boolean derivatives;
+
+    @Column(name = &quot;ai_training&quot;, nullable = false)
+    private boolean aiTraining;
+
+    @Column(name = &quot;attribution_required&quot;, nullable = false)
+    private boolean attributionRequired;
+
+    @Column(name = &quot;share_alike&quot;, nullable = false)
+    private boolean shareAlike;
+
+    /**
+     * Creates an empty policy instance for JPA.
+     */
+<span class="fc" id="L61">    protected LicensePolicy() {</span>
+        // Required by JPA.
+<span class="fc" id="L63">    }</span>
+
+    /**
+     * Creates a policy with its client, identifier, version, and permissions.
+     *
+     * @param clientId the owning client's identifier
+     * @param policyId the policy identifier
+     * @param version the policy version
+     * @param commercialUse whether commercial use is permitted
+     * @param redistribution whether redistribution is permitted
+     * @param derivatives whether derivative works are permitted
+     * @param aiTraining whether AI training is permitted
+     * @param attributionRequired whether attribution is required
+     * @param shareAlike whether derivative works must use the same license
+     */
+    public LicensePolicy(
+            String clientId,
+            String policyId,
+            int version,
+            boolean commercialUse,
+            boolean redistribution,
+            boolean derivatives,
+            boolean aiTraining,
+            boolean attributionRequired,
+<span class="fc" id="L87">            boolean shareAlike) {</span>
+<span class="fc" id="L88">        this.clientId = clientId;</span>
+<span class="fc" id="L89">        this.policyId = policyId;</span>
+<span class="fc" id="L90">        this.version = version;</span>
+<span class="fc" id="L91">        this.commercialUse = commercialUse;</span>
+<span class="fc" id="L92">        this.redistribution = redistribution;</span>
+<span class="fc" id="L93">        this.derivatives = derivatives;</span>
+<span class="fc" id="L94">        this.aiTraining = aiTraining;</span>
+<span class="fc" id="L95">        this.attributionRequired = attributionRequired;</span>
+<span class="fc" id="L96">        this.shareAlike = shareAlike;</span>
+<span class="fc" id="L97">    }</span>
+
+    public Long getId() {
+<span class="nc" id="L100">        return id;</span>
+    }
+
+    public String getClientId() {
+<span class="fc" id="L104">        return clientId;</span>
+    }
+
+    public String getPolicyId() {
+<span class="fc" id="L108">        return policyId;</span>
+    }
+
+    public int getVersion() {
+<span class="fc" id="L112">        return version;</span>
+    }
+
+    public boolean isCommercialUse() {
+<span class="fc" id="L116">        return commercialUse;</span>
+    }
+
+    public boolean isRedistribution() {
+<span class="fc" id="L120">        return redistribution;</span>
+    }
+
+    public boolean isDerivatives() {
+<span class="fc" id="L124">        return derivatives;</span>
+    }
+
+    public boolean isAiTraining() {
+<span class="fc" id="L128">        return aiTraining;</span>
+    }
+
+    public boolean isAttributionRequired() {
+<span class="fc" id="L132">        return attributionRequired;</span>
+    }
+
+    public boolean isShareAlike() {
+<span class="fc" id="L136">        return shareAlike;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

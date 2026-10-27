@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DerivationEdge.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">LicenseGraph</a> &gt; <a href="index.source.html" class="el_package">com.licensegraph.lineage</a> &gt; <span class="el_source">DerivationEdge.java</span></div><h1>DerivationEdge.java</h1><pre class="source lang-java linenums">package com.licensegraph.lineage;
+
+import com.licensegraph.asset.PolicyConflict;
+import com.licensegraph.common.AssetRef;
+import com.licensegraph.common.LineageEdge;
+import com.licensegraph.common.RelationType;
+import jakarta.persistence.CollectionTable;
+import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Index;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+/**
+ * AI-assisted: One stored derivation edge, directed from input to output and owned by one client
+ * (C1).
+ *
+ * &lt;p&gt;Edges are insert-only: there are no setters, and the only change after construction is
+ * attaching the conflicts found for this edge inside the same transaction.
+ */
+
+@Entity
+@Table(
+        name = &quot;derivation_edge&quot;,
+        uniqueConstraints = @UniqueConstraint(
+                name = &quot;uk_derivation_edge&quot;,
+                columnNames = {&quot;client_id&quot;, &quot;input_asset_id&quot;, &quot;input_version&quot;,
+                        &quot;output_asset_id&quot;, &quot;output_version&quot;, &quot;relation&quot;}),
+        indexes = {
+                @Index(name = &quot;ix_edge_by_output&quot;, columnList = &quot;client_id, output_asset_id, &quot;
+                       + &quot;output_version&quot;),
+                @Index(name = &quot;ix_edge_by_input&quot;, columnList = &quot;client_id, input_asset_id, &quot;
+                       + &quot;input_version&quot;)
+        })
+public class DerivationEdge {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = &quot;client_id&quot;, nullable = false)
+    private String clientId;
+
+    @Column(name = &quot;input_asset_id&quot;, nullable = false)
+    private String inputAssetId;
+
+    @Column(name = &quot;input_version&quot;, nullable = false)
+    private int inputVersion;
+
+    @Column(name = &quot;output_asset_id&quot;, nullable = false)
+    private String outputAssetId;
+
+    @Column(name = &quot;output_version&quot;, nullable = false)
+    private int outputVersion;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = &quot;relation&quot;, nullable = false, length = 32)
+    private RelationType relation;
+
+    @Column(name = &quot;created_at&quot;, nullable = false)
+    private Instant createdAt;
+
+<span class="fc" id="L74">    @ElementCollection</span>
+    @CollectionTable(name = &quot;derivation_edge_conflict&quot;, joinColumns = @JoinColumn(name = &quot;edge_id&quot;))
+    private List&lt;EdgeConflict&gt; conflicts = new ArrayList&lt;&gt;();
+
+    /**
+     * Required by JPA.
+     */
+<span class="fc" id="L81">    protected DerivationEdge() {</span>
+<span class="fc" id="L82">    }</span>
+
+    /**
+     * Creates a new edge for one input of a derivation request.
+     */
+    public DerivationEdge(String clientId, AssetRef input, AssetRef output,
+<span class="fc" id="L88">                          RelationType relation, Instant createdAt) {</span>
+<span class="fc" id="L89">        this.clientId = clientId;</span>
+<span class="fc" id="L90">        this.inputAssetId = input.assetId();</span>
+<span class="fc" id="L91">        this.inputVersion = input.version();</span>
+<span class="fc" id="L92">        this.outputAssetId = output.assetId();</span>
+<span class="fc" id="L93">        this.outputVersion = output.version();</span>
+<span class="fc" id="L94">        this.relation = relation;</span>
+<span class="fc" id="L95">        this.createdAt = createdAt;</span>
+<span class="fc" id="L96">    }</span>
+
+    /**
+     * Attaches the conflicts Module B found for this edge's input (C5).
+     */
+    public void recordConflicts(List&lt;PolicyConflict&gt; found) {
+<span class="fc bfc" id="L102" title="All 2 branches covered.">        for (PolicyConflict conflict : found) {</span>
+<span class="fc" id="L103">            conflicts.add(EdgeConflict.from(conflict));</span>
+<span class="fc" id="L104">        }</span>
+<span class="fc" id="L105">    }</span>
+
+    public Long getId() {
+<span class="nc" id="L108">        return id;</span>
+    }
+
+    public String getClientId() {
+<span class="nc" id="L112">        return clientId;</span>
+    }
+
+    public AssetRef input() {
+<span class="fc" id="L116">        return new AssetRef(inputAssetId, inputVersion);</span>
+    }
+
+    public AssetRef output() {
+<span class="fc" id="L120">        return new AssetRef(outputAssetId, outputVersion);</span>
+    }
+
+    public RelationType getRelation() {
+<span class="nc" id="L124">        return relation;</span>
+    }
+
+    public Instant getCreatedAt() {
+<span class="nc" id="L128">        return createdAt;</span>
+    }
+
+    public List&lt;PolicyConflict&gt; getConflicts() {
+<span class="fc" id="L132">        return conflicts.stream().map(EdgeConflict::toPolicyConflict).toList();</span>
+    }
+
+    /**
+     * Converts this row into the shared record other modules read.
+     */
+    public LineageEdge toLineageEdge() {
+<span class="fc" id="L139">        return new LineageEdge(input(), output(), relation);</span>
+    }
+
+    /**
+     * Unmodifiable view, mainly for tests.
+     */
+    List&lt;EdgeConflict&gt; storedConflicts() {
+<span class="nc" id="L146">        return Collections.unmodifiableList(conflicts);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PolicyRulesImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">LicenseGraph</a> &gt; <a href="index.source.html" class="el_package">com.licensegraph.policy</a> &gt; <span class="el_source">PolicyRulesImpl.java</span></div><h1>PolicyRulesImpl.java</h1><pre class="source lang-java linenums">
+package com.licensegraph.policy;
+
+import com.licensegraph.common.AssetRef;
+import com.licensegraph.common.IntendedUse;
+import com.licensegraph.common.Obligation;
+import java.util.List;
+import org.springframework.stereotype.Service;
+
+/**
+ * Evaluates policy permissions and calculates required obligations.
+ */
+@Service
+<span class="fc" id="L14">public class PolicyRulesImpl implements PolicyRules {</span>
+
+    @Override
+    public RuleOutcome check(PolicyView policy, IntendedUse use) {
+<span class="fc bfc" id="L18" title="All 5 branches covered.">        return switch (use) {</span>
+            case COMMERCIAL -&gt;
+<span class="fc" id="L20">                    new RuleOutcome(policy.commercialUse(),</span>
+<span class="fc bfc" id="L21" title="All 2 branches covered.">                            policy.commercialUse() ? null : &quot;commercialUse&quot;);</span>
+
+            case REDISTRIBUTION -&gt;
+<span class="fc" id="L24">                    new RuleOutcome(policy.redistribution(),</span>
+<span class="fc bfc" id="L25" title="All 2 branches covered.">                            policy.redistribution() ? null : &quot;redistribution&quot;);</span>
+
+            case DERIVATIVE -&gt;
+<span class="fc" id="L28">                    new RuleOutcome(policy.derivatives(),</span>
+<span class="fc bfc" id="L29" title="All 2 branches covered.">                            policy.derivatives() ? null : &quot;derivatives&quot;);</span>
+
+            case AI_TRAINING -&gt;
+<span class="fc" id="L32">                    new RuleOutcome(policy.aiTraining(),</span>
+<span class="fc bfc" id="L33" title="All 2 branches covered.">                            policy.aiTraining() ? null : &quot;aiTraining&quot;);</span>
+
+<span class="fc" id="L35">            case INTERNAL -&gt; new RuleOutcome(true, null);</span>
+        };
+    }
+
+    @Override
+    public List&lt;Obligation&gt; obligations(
+            AssetRef source, PolicyView policy) {
+
+<span class="fc" id="L43">        List&lt;Obligation&gt; obligations = new java.util.ArrayList&lt;&gt;();</span>
+
+<span class="fc bfc" id="L45" title="All 2 branches covered.">        if (policy.attributionRequired()) {</span>
+<span class="fc" id="L46">            obligations.add(new Obligation(</span>
+                    com.licensegraph.common.ObligationType.ATTRIBUTION,
+                    source,
+<span class="fc" id="L49">                    policy.ref()));</span>
+        }
+
+<span class="fc bfc" id="L52" title="All 2 branches covered.">        if (policy.shareAlike()) {</span>
+<span class="fc" id="L53">            obligations.add(new Obligation(</span>
+                    com.licensegraph.common.ObligationType.SHARE_ALIKE,
+                    source,
+<span class="fc" id="L56">                    policy.ref()));</span>
+        }
+
+<span class="fc" id="L59">        return obligations;</span>
+    }
+
+
+    @Override
+    public List&lt;Obligation&gt; mergeObligations(List&lt;Obligation&gt; all) {
+<span class="fc" id="L65">        java.util.Map&lt;String, Obligation&gt; unique = new java.util.LinkedHashMap&lt;&gt;();</span>
+
+<span class="fc bfc" id="L67" title="All 2 branches covered.">        for (Obligation obligation : all) {</span>
+<span class="fc" id="L68">            String key = obligation.source().assetId()</span>
+<span class="fc" id="L69">                    + &quot;:&quot; + obligation.source().version()</span>
+<span class="fc" id="L70">                    + &quot;|&quot; + obligation.type().toJson();</span>
+
+<span class="fc" id="L72">            unique.putIfAbsent(key, obligation);</span>
+<span class="fc" id="L73">        }</span>
+
+<span class="fc" id="L75">        return unique.values().stream()</span>
+<span class="fc" id="L76">                .sorted(</span>
+                        java.util.Comparator
+<span class="fc" id="L78">                                .comparing((Obligation o) -&gt; o.source().assetId())</span>
+<span class="fc" id="L79">                                .thenComparingInt(o -&gt; o.source().version())</span>
+<span class="fc" id="L80">                                .thenComparing(o -&gt; o.type().toJson())</span>
+                )
+<span class="fc" id="L82">                .toList();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

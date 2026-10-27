@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CreateUseDecisionRequest.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">LicenseGraph</a> &gt; <a href="index.source.html" class="el_package">com.licensegraph.decision</a> &gt; <span class="el_source">CreateUseDecisionRequest.java</span></div><h1>CreateUseDecisionRequest.java</h1><pre class="source lang-java linenums">package com.licensegraph.decision;
+
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+
+/**
+ * Request body for creating a new use decision.
+ *
+ * &lt;p&gt;Used by POST /api/use-decisions to identify the target asset
+ * version and intended use that must be evaluated.
+ *
+ * &lt;p&gt;Bean Validation ensures that the asset identifier is not blank,
+ * the version is positive, and the intended use is provided.
+ *
+ * &lt;p&gt;The authenticated client identifier is intentionally excluded
+ * from this request. It is obtained through ClientContext instead.
+ *
+ * &lt;p&gt;AI-assisted: AI assistance was used to refine request validation,
+ * handle unsupported intended-use values, and improve documentation
+ * and Checkstyle compliance.
+ *
+ * @param assetId non-blank identifier of the target asset
+ * @param version positive version number of the target asset
+ * @param intendedUse intended use to evaluate, as its JSON value (for example
+ *     {@code commercial}); kept as text so an unknown value is reported as
+ *     {@code INVALID_INTENDED_USE} rather than a generic parse error
+ *
+ */
+<span class="fc" id="L29">public record CreateUseDecisionRequest(</span>
+        @NotBlank String assetId,
+        @Min(1) int version,
+        @NotBlank String intendedUse
+) {
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

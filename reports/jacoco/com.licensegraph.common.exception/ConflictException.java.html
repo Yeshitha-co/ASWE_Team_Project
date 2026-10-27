@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ConflictException.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">LicenseGraph</a> &gt; <a href="index.source.html" class="el_package">com.licensegraph.common.exception</a> &gt; <span class="el_source">ConflictException.java</span></div><h1>ConflictException.java</h1><pre class="source lang-java linenums">package com.licensegraph.common.exception;
+
+import com.licensegraph.common.AssetRef;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * HTTP 409 failures: duplicate versions or edges, and cycle detection.
+ *
+ * &lt;p&gt;{@code DerivationService} throws this type for {@code CYCLE_DETECTED} and
+ * {@code DUPLICATE_EDGE}; the whole derivation batch must roll back.
+ */
+public class ConflictException extends ApiException {
+
+    public ConflictException(ErrorCode code, String message) {
+<span class="fc" id="L16">        super(require409(code), message);</span>
+<span class="fc" id="L17">    }</span>
+
+    public ConflictException(ErrorCode code, String message, Map&lt;String, Object&gt; details) {
+<span class="fc" id="L20">        super(require409(code), message, details);</span>
+<span class="fc" id="L21">    }</span>
+
+    /** Builds a 409 {@code CYCLE_DETECTED} failure whose details list the closed path. */
+    public static ConflictException cycleDetected(List&lt;AssetRef&gt; cyclePath) {
+<span class="fc" id="L25">        List&lt;String&gt; namedPath = cyclePath.stream().map(AssetRef::toString).toList();</span>
+<span class="fc" id="L26">        String message = &quot;Edge would create a cycle&quot;;</span>
+<span class="pc bpc" id="L27" title="1 of 2 branches missed.">        if (namedPath.size() &gt;= 2) {</span>
+<span class="fc" id="L28">            message = &quot;Edge &quot; + namedPath.get(namedPath.size() - 2) + &quot; -&gt; &quot;</span>
+<span class="fc" id="L29">                    + namedPath.get(namedPath.size() - 1)</span>
+                    + &quot; would create a cycle&quot;;
+        }
+<span class="fc" id="L32">        return new ConflictException(</span>
+<span class="fc" id="L33">                ErrorCode.CYCLE_DETECTED, message, Map.of(&quot;cyclePath&quot;, namedPath));</span>
+    }
+
+    public static ConflictException duplicateEdge() {
+<span class="fc" id="L37">        return new ConflictException(ErrorCode.DUPLICATE_EDGE, &quot;Derivation edge already exists&quot;);</span>
+    }
+
+    public static ConflictException duplicatePolicyVersion(String policyName) {
+<span class="fc" id="L41">        return new ConflictException(</span>
+                ErrorCode.DUPLICATE_POLICY_VERSION, &quot;Policy version already exists: &quot; + policyName);
+    }
+
+    public static ConflictException duplicateAssetVersion(String assetName) {
+<span class="fc" id="L46">        return new ConflictException(</span>
+                ErrorCode.DUPLICATE_ASSET_VERSION, &quot;Asset version already exists: &quot; + assetName);
+    }
+
+    private static ErrorCode require409(ErrorCode code) {
+<span class="pc bpc" id="L51" title="1 of 2 branches missed.">        if (code.status() != 409) {</span>
+<span class="nc" id="L52">            throw new IllegalArgumentException(code + &quot; is not a 409 code&quot;);</span>
+        }
+<span class="fc" id="L54">        return code;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

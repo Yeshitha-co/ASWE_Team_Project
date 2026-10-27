@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DerivationController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">LicenseGraph</a> &gt; <a href="index.source.html" class="el_package">com.licensegraph.lineage</a> &gt; <span class="el_source">DerivationController.java</span></div><h1>DerivationController.java</h1><pre class="source lang-java linenums">package com.licensegraph.lineage;
+
+import com.licensegraph.common.AssetRef;
+import com.licensegraph.common.exception.NotFoundException;
+import com.licensegraph.lineage.LineageResponses.DerivationResponse;
+import com.licensegraph.lineage.LineageResponses.GraphResponse;
+import com.licensegraph.security.ClientContext;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
+
+/**
+ * AI-assisted: REST endpoints for Module C: record a derivation, and read ancestors or descendants
+ * (C2, C7).
+ * The caller's client id always comes from {@link ClientContext}, never from the request body.
+ */
+@RestController
+@RequestMapping(&quot;/api&quot;)
+public class DerivationController {
+
+    private final DerivationService derivations;
+    private final LineageQueryService lineage;
+    private final ClientContext clientContext;
+
+    /**
+     * Wires the derivation and lineage services with the caller's client context.
+     */
+    public DerivationController(DerivationService derivations,
+                                LineageQueryService lineage,
+<span class="fc" id="L36">                                ClientContext clientContext) {</span>
+<span class="fc" id="L37">        this.derivations = derivations;</span>
+<span class="fc" id="L38">        this.lineage = lineage;</span>
+<span class="fc" id="L39">        this.clientContext = clientContext;</span>
+<span class="fc" id="L40">    }</span>
+
+    /**
+     * POST /api/derivations: 201 with created edges, conflicts and the output's ancestor count.
+     */
+    @PostMapping(&quot;/derivations&quot;)
+    @ResponseStatus(HttpStatus.CREATED)
+    public DerivationResponse recordDerivation(@Valid @RequestBody DerivationRequest request) {
+<span class="fc" id="L48">        AssetRef output = request.output().toRef();</span>
+<span class="fc" id="L49">        DerivationResult result = derivations.recordDerivation(</span>
+<span class="fc" id="L50">                clientContext.currentClientId(), output, request.toInputs());</span>
+<span class="fc" id="L51">        return DerivationResponse.from(output, result);</span>
+    }
+
+    /**
+     * GET /api/assets/{assetId}/versions/{version}/ancestors: 200 with the upstream subgraph.
+     */
+    @GetMapping(&quot;/assets/{assetId}/versions/{version}/ancestors&quot;)
+    public GraphResponse ancestors(@PathVariable String assetId, @PathVariable int version) {
+<span class="fc" id="L59">        return GraphResponse.from(</span>
+<span class="fc" id="L60">                lineage.findAncestors(clientContext.currentClientId(), pathRef(assetId, version)));</span>
+    }
+
+    /**
+     * GET /api/assets/{assetId}/versions/{version}/descendants: 200 with the downstream subgraph.
+     */
+    @GetMapping(&quot;/assets/{assetId}/versions/{version}/descendants&quot;)
+    public GraphResponse descendants(@PathVariable String assetId, @PathVariable int version) {
+<span class="fc" id="L68">        return GraphResponse.from(</span>
+<span class="fc" id="L69">                lineage.findDescendants(</span>
+<span class="fc" id="L70">                        clientContext.currentClientId(), pathRef(assetId, version)));</span>
+    }
+
+    /** A version below 1 can never exist, so it is not found (not a 500 from AssetRef). */
+    private static AssetRef pathRef(String assetId, int version) {
+<span class="fc bfc" id="L75" title="All 2 branches covered.">        if (version &lt; 1) {</span>
+<span class="fc" id="L76">            throw NotFoundException.asset(assetId + &quot;:v&quot; + version);</span>
+        }
+<span class="fc" id="L78">        return new AssetRef(assetId, version);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

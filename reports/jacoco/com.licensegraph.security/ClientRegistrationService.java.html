@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ClientRegistrationService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">LicenseGraph</a> &gt; <a href="index.source.html" class="el_package">com.licensegraph.security</a> &gt; <span class="el_source">ClientRegistrationService.java</span></div><h1>ClientRegistrationService.java</h1><pre class="source lang-java linenums">package com.licensegraph.security;
+
+import java.time.Instant;
+import java.util.UUID;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+/**
+ * AI-assisted: Key generation, hashing, and client registration.
+ *
+ * &lt;p&gt;Registers a client and returns its API key once (E2).
+ */
+@Service
+public class ClientRegistrationService {
+
+    private final ApiClientRepository clients;
+    private final ApiKeyGenerator keys;
+
+<span class="fc" id="L19">    public ClientRegistrationService(ApiClientRepository clients, ApiKeyGenerator keys) {</span>
+<span class="fc" id="L20">        this.clients = clients;</span>
+<span class="fc" id="L21">        this.keys = keys;</span>
+<span class="fc" id="L22">    }</span>
+
+    /**
+     * Creates a new client. The raw key is not written to the database.
+     */
+    @Transactional
+    public ClientRegistrationResponse register() {
+<span class="fc" id="L29">        String apiKey = keys.generate();</span>
+<span class="fc" id="L30">        String clientId = UUID.randomUUID().toString();</span>
+<span class="fc" id="L31">        clients.save(new ApiClient(clientId, ApiKeyHasher.sha256Hex(apiKey), Instant.now()));</span>
+<span class="fc" id="L32">        return new ClientRegistrationResponse(clientId, apiKey);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

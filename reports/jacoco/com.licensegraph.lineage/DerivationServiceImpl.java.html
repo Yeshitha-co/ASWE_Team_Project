@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DerivationServiceImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">LicenseGraph</a> &gt; <a href="index.source.html" class="el_package">com.licensegraph.lineage</a> &gt; <span class="el_source">DerivationServiceImpl.java</span></div><h1>DerivationServiceImpl.java</h1><pre class="source lang-java linenums">package com.licensegraph.lineage;
+
+import com.licensegraph.asset.AssetLookup;
+import com.licensegraph.asset.DerivationConflictChecker;
+import com.licensegraph.asset.PolicyConflict;
+import com.licensegraph.common.AssetRef;
+import com.licensegraph.common.DerivationInput;
+import com.licensegraph.common.LineageEdge;
+import com.licensegraph.common.LineageGraph;
+import com.licensegraph.common.exception.BadRequestException;
+import com.licensegraph.common.exception.ConflictException;
+import com.licensegraph.common.exception.ErrorCode;
+import com.licensegraph.common.exception.UnprocessableEntityException;
+import java.time.Instant;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
+
+/**
+ * AI-assisted: Records derivations: validates every referenced asset, rejects cycles and duplicate
+ * edges,
+ * stores the edges with any upstream policy conflicts, and returns the result (C2 to C5).
+ *
+ * &lt;p&gt;All checks and inserts for one request run in a single transaction while holding a
+ * per-client lock, so two concurrent requests cannot jointly form a cycle. Any failure rolls
+ * back the whole batch.
+ */
+
+@Service
+public class DerivationServiceImpl implements DerivationService {
+
+    private final DerivationEdgeRepository edges;
+    private final AssetLookup assets;
+    private final DerivationConflictChecker conflictChecker;
+    private final LineageQueryService lineage;
+    private final TransactionTemplate transaction;
+
+    /**
+     * One lock object per client. Same client waits; different clients never block each other.
+     */
+<span class="fc" id="L54">    private final ConcurrentMap&lt;String, Object&gt; clientLocks = new ConcurrentHashMap&lt;&gt;();</span>
+
+    /**
+     * Wires the edge repository, Module B collaborators, lineage queries and transactions.
+     */
+    public DerivationServiceImpl(DerivationEdgeRepository edges,
+                                 AssetLookup assets,
+                                 DerivationConflictChecker conflictChecker,
+                                 LineageQueryService lineage,
+<span class="fc" id="L63">                                 PlatformTransactionManager transactionManager) {</span>
+<span class="fc" id="L64">        this.edges = edges;</span>
+<span class="fc" id="L65">        this.assets = assets;</span>
+<span class="fc" id="L66">        this.conflictChecker = conflictChecker;</span>
+<span class="fc" id="L67">        this.lineage = lineage;</span>
+<span class="fc" id="L68">        this.transaction = new TransactionTemplate(transactionManager);</span>
+<span class="fc" id="L69">    }</span>
+
+    @Override
+    public DerivationResult recordDerivation(String clientId, AssetRef output,
+                                             List&lt;DerivationInput&gt; inputs) {
+<span class="pc bpc" id="L74" title="1 of 4 branches missed.">        if (inputs == null || inputs.isEmpty()) {</span>
+<span class="fc" id="L75">            throw new BadRequestException(ErrorCode.VALIDATION_ERROR, &quot;At least one input is &quot;</span>
+                    + &quot;required&quot;);
+        }
+        // The lock is held until the transaction has committed, so the next request sees our edges.
+<span class="fc" id="L79">        Object clientLock = clientLocks.computeIfAbsent(clientId, id -&gt; new Object());</span>
+<span class="fc" id="L80">        synchronized (clientLock) {</span>
+<span class="fc" id="L81">            return transaction.execute(status -&gt; recordInTransaction(clientId, output, inputs));</span>
+        }
+    }
+
+    private DerivationResult recordInTransaction(String clientId, AssetRef output,
+                                                 List&lt;DerivationInput&gt; inputs) {
+        // Step 2: every referenced asset must exist for this client (C2).
+<span class="fc" id="L88">        requireKnown(clientId, output);</span>
+<span class="fc bfc" id="L89" title="All 2 branches covered.">        for (DerivationInput input : inputs) {</span>
+<span class="fc" id="L90">            requireKnown(clientId, input.asset());</span>
+<span class="fc" id="L91">        }</span>
+
+        // Step 3: no input may already descend from the output (C3).
+<span class="fc bfc" id="L94" title="All 2 branches covered.">        for (DerivationInput input : inputs) {</span>
+<span class="fc" id="L95">            Optional&lt;List&lt;AssetRef&gt;&gt; cycle = findCyclePath(clientId, input.asset(), output);</span>
+<span class="fc bfc" id="L96" title="All 2 branches covered.">            if (cycle.isPresent()) {</span>
+<span class="fc" id="L97">                throw ConflictException.cycleDetected(cycle.get());</span>
+            }
+<span class="fc" id="L99">        }</span>
+
+        // Step 4: no exact duplicate, stored or within this request (C4).
+<span class="fc" id="L102">        rejectDuplicates(clientId, output, inputs);</span>
+
+        // Step 5: upstream graph per input, then ask Module B for conflicts (C5).
+<span class="fc" id="L105">        Map&lt;AssetRef, LineageGraph&gt; upstreamByInput = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc bfc" id="L106" title="All 2 branches covered.">        for (DerivationInput input : inputs) {</span>
+<span class="fc" id="L107">            upstreamByInput.put(input.asset(), lineage.findAncestors(clientId, input.asset()));</span>
+<span class="fc" id="L108">        }</span>
+<span class="fc" id="L109">        List&lt;PolicyConflict&gt; conflicts = conflictChecker.check(clientId, inputs, upstreamByInput);</span>
+
+        // Step 6: build each edge, attach the conflicts from its own input's upstream, save all.
+<span class="fc" id="L112">        Instant now = Instant.now();</span>
+<span class="fc" id="L113">        List&lt;DerivationEdge&gt; toSave = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L114" title="All 2 branches covered.">        for (DerivationInput input : inputs) {</span>
+<span class="fc" id="L115">            DerivationEdge edge = new DerivationEdge(clientId, input.asset(), output,</span>
+<span class="fc" id="L116">                    input.relation(), now);</span>
+<span class="fc" id="L117">            Set&lt;AssetRef&gt; upstream = upstreamByInput.get(input.asset()).nodes();</span>
+<span class="fc" id="L118">            List&lt;PolicyConflict&gt; ownConflicts = conflicts.stream()</span>
+<span class="fc" id="L119">                    .filter(c -&gt; upstream.contains(c.source()))</span>
+<span class="fc" id="L120">                    .toList();</span>
+<span class="fc" id="L121">            edge.recordConflicts(ownConflicts);</span>
+<span class="fc" id="L122">            toSave.add(edge);</span>
+<span class="fc" id="L123">        }</span>
+<span class="fc" id="L124">        List&lt;LineageEdge&gt; created = edges.saveAll(toSave).stream()</span>
+<span class="fc" id="L125">                .map(DerivationEdge::toLineageEdge)</span>
+<span class="fc" id="L126">                .toList();</span>
+
+        // Step 7: the output's ancestors are exactly the union of its inputs' upstream graphs.
+<span class="fc" id="L129">        Set&lt;AssetRef&gt; ancestors = new HashSet&lt;&gt;();</span>
+<span class="fc bfc" id="L130" title="All 2 branches covered.">        for (LineageGraph graph : upstreamByInput.values()) {</span>
+<span class="fc" id="L131">            ancestors.addAll(graph.nodes());</span>
+<span class="fc" id="L132">        }</span>
+<span class="fc" id="L133">        return new DerivationResult(created, conflicts, ancestors.size());</span>
+    }
+
+    /**
+     * 422 UNKNOWN_INPUT_ASSET when the asset is missing or belongs to another client.
+     */
+    private void requireKnown(String clientId, AssetRef ref) {
+<span class="fc bfc" id="L140" title="All 2 branches covered.">        if (assets.findAsset(clientId, ref).isEmpty()) {</span>
+<span class="fc" id="L141">            throw new UnprocessableEntityException(</span>
+                    ErrorCode.UNKNOWN_INPUT_ASSET, &quot;Unknown asset in request: &quot; + ref);
+        }
+<span class="fc" id="L144">    }</span>
+
+    /**
+     * Walks up from the input. If the output is reached, adding input -&gt; output would close a
+     * loop. Returns the path [output, input, ..., output], matching the plan's cyclePath format.
+     */
+    private Optional&lt;List&lt;AssetRef&gt;&gt; findCyclePath(String clientId, AssetRef input,
+                                                   AssetRef output) {
+<span class="fc bfc" id="L152" title="All 2 branches covered.">        if (input.equals(output)) {</span>
+<span class="fc" id="L153">            return Optional.of(List.of(output, input));</span>
+        }
+<span class="fc" id="L155">        Map&lt;AssetRef, AssetRef&gt; reachedFrom = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L156">        Set&lt;AssetRef&gt; visited = new HashSet&lt;&gt;();</span>
+<span class="fc" id="L157">        Deque&lt;AssetRef&gt; queue = new ArrayDeque&lt;&gt;();</span>
+<span class="fc" id="L158">        visited.add(input);</span>
+<span class="fc" id="L159">        queue.add(input);</span>
+
+<span class="fc bfc" id="L161" title="All 2 branches covered.">        while (!queue.isEmpty()) {</span>
+<span class="fc" id="L162">            AssetRef current = queue.poll();</span>
+<span class="fc bfc" id="L163" title="All 2 branches covered.">            for (DerivationEdge edge : edges.findByClientIdAndOutputAssetIdAndOutputVersion(</span>
+<span class="fc" id="L164">                    clientId, current.assetId(), current.version())) {</span>
+<span class="fc" id="L165">                AssetRef parent = edge.input();</span>
+<span class="pc bpc" id="L166" title="1 of 2 branches missed.">                if (!visited.add(parent)) {</span>
+<span class="nc" id="L167">                    continue;</span>
+                }
+<span class="fc" id="L169">                reachedFrom.put(parent, current);</span>
+<span class="fc bfc" id="L170" title="All 2 branches covered.">                if (parent.equals(output)) {</span>
+<span class="fc" id="L171">                    return Optional.of(buildPath(output, parent, reachedFrom));</span>
+                }
+<span class="fc" id="L173">                queue.add(parent);</span>
+<span class="fc" id="L174">            }</span>
+<span class="fc" id="L175">        }</span>
+<span class="fc" id="L176">        return Optional.empty();</span>
+    }
+
+    /**
+     * Follows the reachedFrom links back to the input, then puts the output in front.
+     */
+    private List&lt;AssetRef&gt; buildPath(AssetRef output, AssetRef found,
+                                     Map&lt;AssetRef, AssetRef&gt; reachedFrom) {
+<span class="fc" id="L184">        LinkedList&lt;AssetRef&gt; path = new LinkedList&lt;&gt;();</span>
+<span class="fc bfc" id="L185" title="All 2 branches covered.">        for (AssetRef node = found; node != null; node = reachedFrom.get(node)) {</span>
+<span class="fc" id="L186">            path.addFirst(node);</span>
+        }
+<span class="fc" id="L188">        path.addFirst(output);</span>
+<span class="fc" id="L189">        return path;</span>
+    }
+
+    /**
+     * 409 DUPLICATE_EDGE if an identical edge is already stored or repeated in this request.
+     */
+    private void rejectDuplicates(String clientId, AssetRef output, List&lt;DerivationInput&gt; inputs) {
+<span class="fc" id="L196">        Set&lt;String&gt; seenInRequest = new HashSet&lt;&gt;();</span>
+<span class="fc bfc" id="L197" title="All 2 branches covered.">        for (DerivationInput input : inputs) {</span>
+<span class="fc" id="L198">            AssetRef in = input.asset();</span>
+<span class="fc bfc" id="L199" title="All 2 branches covered.">            boolean repeated = !seenInRequest.add(in + &quot;|&quot; + input.relation());</span>
+<span class="fc" id="L200">            boolean stored = edges.existsEdge(clientId, in.assetId(), in.version(),</span>
+<span class="fc" id="L201">                    output.assetId(), output.version(), input.relation());</span>
+<span class="fc bfc" id="L202" title="All 4 branches covered.">            if (repeated || stored) {</span>
+<span class="fc" id="L203">                throw ConflictException.duplicateEdge();</span>
+            }
+<span class="fc" id="L205">        }</span>
+<span class="fc" id="L206">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

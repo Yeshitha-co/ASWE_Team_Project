@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>GlobalExceptionHandler.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">LicenseGraph</a> &gt; <a href="index.source.html" class="el_package">com.licensegraph.security</a> &gt; <span class="el_source">GlobalExceptionHandler.java</span></div><h1>GlobalExceptionHandler.java</h1><pre class="source lang-java linenums">package com.licensegraph.security;
+
+import com.licensegraph.common.error.ApiError;
+import com.licensegraph.common.exception.ApiException;
+import com.licensegraph.common.exception.ErrorCode;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.ConstraintViolationException;
+import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+
+/**
+ * AI-assisted: Global error handling.
+ *
+ * &lt;p&gt;Maps shared exceptions onto the Section 10 error body (E5). Controllers do not
+ * build error JSON.
+ *
+ * &lt;p&gt;Unexpected failures return 500 with {@code INTERNAL_ERROR} and a fixed message. The exception
+ * text is logged and is not copied into the response. {@code INTERNAL_ERROR} is not a Section 10
+ * business code and is not part of {@link ErrorCode}.
+ */
+@RestControllerAdvice
+<span class="fc" id="L30">public class GlobalExceptionHandler {</span>
+
+    static final String INTERNAL_ERROR = &quot;INTERNAL_ERROR&quot;;
+
+<span class="fc" id="L34">    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);</span>
+
+    @ExceptionHandler(ApiException.class)
+    public ResponseEntity&lt;ApiError&gt; handleApiException(
+            ApiException exception, HttpServletRequest request) {
+<span class="fc" id="L39">        return response(ApiErrorFactory.from(exception, request.getRequestURI()));</span>
+    }
+
+    /**
+     * Maps bean validation and unreadable JSON to 400 {@code VALIDATION_ERROR}.
+     */
+    @ExceptionHandler({
+            MethodArgumentNotValidException.class,
+            ConstraintViolationException.class,
+            HttpMessageNotReadableException.class,
+            MethodArgumentTypeMismatchException.class
+    })
+    public ResponseEntity&lt;ApiError&gt; handleValidation(
+            Exception exception, HttpServletRequest request) {
+<span class="fc" id="L53">        ApiError body = ApiErrorFactory.of(</span>
+<span class="fc" id="L54">                ErrorCode.VALIDATION_ERROR.status(),</span>
+<span class="fc" id="L55">                ErrorCode.VALIDATION_ERROR.name(),</span>
+<span class="fc" id="L56">                validationMessage(exception),</span>
+<span class="fc" id="L57">                request.getRequestURI(),</span>
+                null);
+<span class="fc" id="L59">        return response(body);</span>
+    }
+
+    /**
+     * Last resort for failures that are not one of the shared API exceptions.
+     */
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity&lt;ApiError&gt; handleUnexpected(
+            Exception exception, HttpServletRequest request) {
+<span class="fc" id="L68">        log.error(&quot;Unhandled exception on {}&quot;, request.getRequestURI(), exception);</span>
+<span class="fc" id="L69">        ApiError body = ApiErrorFactory.of(</span>
+<span class="fc" id="L70">                HttpStatus.INTERNAL_SERVER_ERROR.value(),</span>
+                INTERNAL_ERROR,
+                &quot;An unexpected error occurred&quot;,
+<span class="fc" id="L73">                request.getRequestURI(),</span>
+                null);
+<span class="fc" id="L75">        return response(body);</span>
+    }
+
+    private static ResponseEntity&lt;ApiError&gt; response(ApiError body) {
+<span class="fc" id="L79">        return ResponseEntity.status(body.status()).body(body);</span>
+    }
+
+    private static String validationMessage(Exception exception) {
+<span class="fc bfc" id="L83" title="All 2 branches covered.">        if (exception instanceof MethodArgumentNotValidException invalid) {</span>
+<span class="fc" id="L84">            return invalid.getBindingResult().getFieldErrors().stream()</span>
+<span class="fc" id="L85">                    .map(error -&gt; error.getField() + &quot;: &quot; + error.getDefaultMessage())</span>
+<span class="fc" id="L86">                    .collect(Collectors.joining(&quot;; &quot;));</span>
+        }
+<span class="pc bpc" id="L88" title="1 of 2 branches missed.">        if (exception instanceof ConstraintViolationException violations) {</span>
+<span class="nc" id="L89">            return violations.getConstraintViolations().stream()</span>
+<span class="nc" id="L90">                    .map(violation -&gt; violation.getPropertyPath() + &quot;: &quot; + violation.getMessage())</span>
+<span class="nc" id="L91">                    .collect(Collectors.joining(&quot;; &quot;));</span>
+        }
+<span class="fc bfc" id="L93" title="All 2 branches covered.">        if (exception instanceof MethodArgumentTypeMismatchException mismatch) {</span>
+<span class="fc" id="L94">            return mismatch.getName() + &quot; is invalid&quot;;</span>
+        }
+<span class="fc" id="L96">        return &quot;Request body is invalid&quot;;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

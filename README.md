@@ -208,7 +208,11 @@ Done:
 
 Still in progress:
 
-- E7: branch protection, issue templates, and the Projects board are not set up on the repository. The release tag is not created yet.
+- E7: branch protection on main requires a pull request. Issue templates are not set up on the repository. The release tag is not created yet.
+
+## Project board
+
+Completed module work and the remaining release task are tracked on the public project [LicenseGraph — T2 First Iteration](https://github.com/users/rileytyh/projects/1).
 
 ## Client registration
 
@@ -801,7 +805,7 @@ Every error uses the same body. `details` is included only when there is somethi
 }
 ```
 
-`401 MISSING_API_KEY` and `401 INVALID_API_KEY` are returned by the API-key filter. The other codes are mapped by `GlobalExceptionHandler` when a module throws the matching shared exception. Per-endpoint examples for Modules A–D will be added as those routes are merged:
+`401 MISSING_API_KEY` and `401 INVALID_API_KEY` are returned by the API-key filter. The other codes are mapped by `GlobalExceptionHandler` when a module throws the matching shared exception.
 
 | Status | Codes |
 | --- | --- |

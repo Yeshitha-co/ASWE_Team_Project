@@ -1,0 +1,205 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>UseDecisionServiceImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">LicenseGraph</a> &gt; <a href="index.source.html" class="el_package">com.licensegraph.decision</a> &gt; <span class="el_source">UseDecisionServiceImpl.java</span></div><h1>UseDecisionServiceImpl.java</h1><pre class="source lang-java linenums">
+package com.licensegraph.decision;
+
+import com.licensegraph.asset.AssetLookup;
+import com.licensegraph.asset.AssetView;
+import com.licensegraph.common.AssetRef;
+import com.licensegraph.common.Decision;
+import com.licensegraph.common.IntendedUse;
+import com.licensegraph.common.LineageGraph;
+import com.licensegraph.common.Obligation;
+import com.licensegraph.common.PolicyRef;
+import com.licensegraph.common.exception.NotFoundException;
+import com.licensegraph.lineage.LineageQueryService;
+import com.licensegraph.policy.PolicyLookup;
+import com.licensegraph.policy.PolicyRules;
+import com.licensegraph.policy.PolicyView;
+import com.licensegraph.policy.RuleOutcome;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import org.springframework.stereotype.Service;
+
+/**
+ * Implements lineage-aware use decision evaluation for Module D.
+ *
+ * &lt;p&gt;Coordinates asset lookup (Module B), policy evaluation (Module A),
+ * and lineage queries (Module C) to determine whether a requested use
+ * is permitted for an asset and its ancestors.
+ *
+ * &lt;p&gt;The service combines policy outcomes, identifies blocking paths,
+ * and collects applicable license obligations. Evaluation and audit
+ * persistence are kept separate so decisions can be evaluated
+ * without modifying stored data.
+ *
+ * &lt;p&gt;AI-assisted: AI assistance was used to review the decision
+ * evaluation implementation, refine documentation, organize imports,
+ * and resolve Checkstyle warnings.
+ *
+ */
+
+@Service
+public class UseDecisionServiceImpl implements UseDecisionService {
+
+    private final AssetLookup assetLookup;
+    private final PolicyLookup policyLookup;
+    private final PolicyRules policyRules;
+    private final LineageQueryService lineageQueryService;
+
+    private final PolicyEvaluation policyEvaluation;
+    private final BlockingPathBuilder blockingPathBuilder;
+    private final DecisionAuditStore decisionAuditStore;
+
+    /**
+     * Creates the decision service with its required collaborators.
+     *
+     * @param assetLookup retrieves stored asset versions
+     * @param policyLookup retrieves the policies attached to assets
+     * @param policyRules evaluates permissions and obligations
+     * @param lineageQueryService retrieves an asset's ancestry graph
+     * @param decisionAuditStore persists completed decision records
+     */
+    public UseDecisionServiceImpl(
+            AssetLookup assetLookup,
+            PolicyLookup policyLookup,
+            PolicyRules policyRules,
+            LineageQueryService lineageQueryService,
+<span class="fc" id="L68">            DecisionAuditStore decisionAuditStore) {</span>
+
+<span class="fc" id="L70">        this.assetLookup = assetLookup;</span>
+<span class="fc" id="L71">        this.policyLookup = policyLookup;</span>
+<span class="fc" id="L72">        this.policyRules = policyRules;</span>
+<span class="fc" id="L73">        this.lineageQueryService = lineageQueryService;</span>
+<span class="fc" id="L74">        this.decisionAuditStore = decisionAuditStore;</span>
+
+<span class="fc" id="L76">        this.policyEvaluation = new PolicyEvaluation();</span>
+<span class="fc" id="L77">        this.blockingPathBuilder = new BlockingPathBuilder();</span>
+<span class="fc" id="L78">    }</span>
+
+    /**
+     * Evaluates an intended use across the target asset's lineage.
+     *
+     * &lt;p&gt;Checks the policy associated with each asset in the ancestry
+     * graph. Any denying policy contributes a blocking path from the
+     * target to the asset responsible for the restriction.
+     *
+     * &lt;p&gt;All policy outcomes are combined into one decision, while
+     * obligations are collected and merged separately. This method
+     * does not save the resulting decision to the audit database.
+     *
+     * @param clientId authenticated client identifier
+     * @param target asset version for which permission is requested
+     * @param use intended use being evaluated
+     * @return combined decision, blocking paths, evaluated policies,
+     *         and applicable obligations
+     * @throws NotFoundException if an asset or its policy cannot be found
+     */
+    @Override
+    public UseDecisionResult evaluate(
+            String clientId,
+            AssetRef target,
+            IntendedUse use) {
+
+        // Retrieve the lineage and include the target even if not
+        // explicitly present in the returned ancestor nodes.
+<span class="fc" id="L106">        LineageGraph graph =</span>
+<span class="fc" id="L107">                lineageQueryService.findAncestors(clientId, target);</span>
+
+<span class="fc" id="L109">        Set&lt;AssetRef&gt; assets = new HashSet&lt;&gt;(graph.nodes());</span>
+<span class="fc" id="L110">        assets.add(target);</span>
+
+        // Collect results from every asset before constructing
+        // the final decision response.
+<span class="fc" id="L114">        List&lt;RuleOutcome&gt; outcomes = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L115">        List&lt;PolicyRef&gt; evaluatedPolicies = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L116">        List&lt;Obligation&gt; allObligations = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L117">        List&lt;BlockingPath&gt; blockingPaths = new ArrayList&lt;&gt;();</span>
+
+<span class="fc bfc" id="L119" title="All 2 branches covered.">        for (AssetRef asset : assets) {</span>
+
+            // Resolve the asset and its attached policy within
+            // the authenticated client's scope.
+<span class="fc" id="L123">            AssetView assetView =</span>
+<span class="fc" id="L124">                    assetLookup.findAsset(clientId, asset)</span>
+<span class="fc" id="L125">                            .orElseThrow(() -&gt;</span>
+<span class="fc" id="L126">                                    NotFoundException.asset(asset.toString())</span>
+                            );
+
+<span class="fc" id="L129">            PolicyRef policyRef = assetView.policy();</span>
+<span class="fc" id="L130">            evaluatedPolicies.add(policyRef);</span>
+
+<span class="fc" id="L132">            PolicyView policyView =</span>
+<span class="fc" id="L133">                    policyLookup.findPolicy(clientId, policyRef)</span>
+<span class="fc" id="L134">                            .orElseThrow(() -&gt;</span>
+<span class="fc" id="L135">                                    NotFoundException.policy(policyRef.toString())</span>
+                            );
+
+            // Check whether this policy permits the requested use.
+<span class="fc" id="L139">            RuleOutcome outcome = policyRules.check(policyView, use);</span>
+<span class="fc" id="L140">            outcomes.add(outcome);</span>
+
+            // Explain each denial using a shortest lineage path
+            // from the target to the blocking asset.
+<span class="fc bfc" id="L144" title="All 2 branches covered.">            if (!outcome.allowed()) {</span>
+<span class="fc" id="L145">                BlockingPath blockingPath = blockingPathBuilder.build(</span>
+                        graph,
+                        target,
+                        asset,
+                        policyRef,
+<span class="fc" id="L150">                        outcome.blockingField()</span>
+                );
+
+<span class="fc" id="L153">                blockingPaths.add(blockingPath);</span>
+            }
+
+            // Report license obligations independently of whether
+            // the final permission decision will be ALLOW or DENY.
+<span class="fc" id="L158">            List&lt;Obligation&gt; obligations =</span>
+<span class="fc" id="L159">                    policyRules.obligations(asset, policyView);</span>
+
+<span class="fc" id="L161">            allObligations.addAll(obligations);</span>
+<span class="fc" id="L162">        }</span>
+
+        // A single denying policy is sufficient for a DENY result.
+<span class="fc" id="L165">        Decision finalDecision = policyEvaluation.evaluate(outcomes);</span>
+
+        // Merge duplicate obligations according to Module A rules.
+<span class="fc" id="L168">        List&lt;Obligation&gt; mergedObligations =</span>
+<span class="fc" id="L169">                policyRules.mergeObligations(allObligations);</span>
+
+<span class="fc" id="L171">        return new UseDecisionResult(</span>
+                target,
+                use,
+                finalDecision,
+                blockingPaths,
+                evaluatedPolicies,
+                mergedObligations
+        );
+    }
+
+    /**
+     * Evaluates a requested use and persists the completed result.
+     *
+     * &lt;p&gt;Delegates the decision calculation to {@link #evaluate}
+     * and stores the result using {@link DecisionAuditStore}.
+     * Unlike evaluate(), this method creates an audit record.
+     *
+     * @param clientId authenticated client identifier
+     * @param target asset version being evaluated
+     * @param use intended use being evaluated
+     * @return saved decision record containing its ID, timestamp,
+     *         and evaluation result
+     */
+    @Override
+    public UseDecisionRecord decideAndRecord(
+            String clientId,
+            AssetRef target,
+            IntendedUse use) {
+
+<span class="fc" id="L200">        UseDecisionResult result = evaluate(clientId, target, use);</span>
+
+<span class="fc" id="L202">        return decisionAuditStore.save(clientId, result);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AssetService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">LicenseGraph</a> &gt; <a href="index.source.html" class="el_package">com.licensegraph.asset</a> &gt; <span class="el_source">AssetService.java</span></div><h1>AssetService.java</h1><pre class="source lang-java linenums">package com.licensegraph.asset;
+
+import com.licensegraph.common.AssetRef;
+import com.licensegraph.common.AssetType;
+import com.licensegraph.common.PolicyRef;
+import com.licensegraph.common.exception.BadRequestException;
+import com.licensegraph.common.exception.ConflictException;
+import com.licensegraph.common.exception.ErrorCode;
+import com.licensegraph.common.exception.NotFoundException;
+import com.licensegraph.common.exception.UnprocessableEntityException;
+import com.licensegraph.policy.PolicyLookup;
+import java.util.Map;
+import java.util.regex.Pattern;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+/**
+ * AI-assisted: Registers and reads asset versions (Module B, tasks B2 to B4).
+ *
+ * &lt;p&gt;Every method takes the caller's {@code clientId} explicitly, so tests need no security
+ * setup and no request can act for another client. Assets are insert-only: there is no update
+ * or delete, and linking an asset to a different policy means registering a new version.
+ */
+@Service
+public class AssetService {
+
+    /**
+     * Ids appear in URL paths and in printed names like {@code dataset-A:v1}, so '/', ':' and
+     * spaces are not allowed.
+     */
+<span class="fc" id="L32">    private static final Pattern ID_PATTERN = Pattern.compile(&quot;[A-Za-z0-9._-]{1,255}&quot;);</span>
+
+    static final int MAX_METADATA_LENGTH = 2000;
+
+    private final AssetRepository repository;
+    private final PolicyLookup policyLookup;
+
+<span class="fc" id="L39">    AssetService(AssetRepository repository, PolicyLookup policyLookup) {</span>
+<span class="fc" id="L40">        this.repository = repository;</span>
+<span class="fc" id="L41">        this.policyLookup = policyLookup;</span>
+<span class="fc" id="L42">    }</span>
+
+    /**
+     * Registers a new asset version for the caller.
+     *
+     * &lt;p&gt;Checks run in this order: request fields (400 {@code VALIDATION_ERROR}), asset type
+     * (400 {@code INVALID_ASSET_TYPE}), duplicate version (409 {@code DUPLICATE_ASSET_VERSION}),
+     * then the policy reference (422 {@code UNKNOWN_POLICY_REFERENCE}).
+     *
+     * @param clientId the caller, from {@code ClientContext}
+     * @param request the request body
+     * @return the stored asset
+     */
+    @Transactional
+    public AssetResponse register(String clientId, RegisterAssetRequest request) {
+<span class="fc bfc" id="L57" title="All 2 branches covered.">        if (request == null) {</span>
+<span class="fc" id="L58">            throw validationError(&quot;Request body is required&quot;, &quot;body&quot;);</span>
+        }
+<span class="fc" id="L60">        String assetId = requireId(&quot;assetId&quot;, request.assetId());</span>
+<span class="fc" id="L61">        int version = requirePositive(&quot;version&quot;, request.version());</span>
+<span class="pc bpc" id="L62" title="1 of 4 branches missed.">        if (request.type() == null || request.type().isBlank()) {</span>
+<span class="fc" id="L63">            throw validationError(&quot;type is required&quot;, &quot;type&quot;);</span>
+        }
+<span class="fc" id="L65">        String policyId = requireId(&quot;policyId&quot;, request.policyId());</span>
+<span class="fc" id="L66">        int policyVersion = requirePositive(&quot;policyVersion&quot;, request.policyVersion());</span>
+<span class="fc bfc" id="L67" title="All 4 branches covered.">        if (request.metadata() != null &amp;&amp; request.metadata().length() &gt; MAX_METADATA_LENGTH) {</span>
+<span class="fc" id="L68">            throw validationError(</span>
+                    &quot;metadata must be at most &quot; + MAX_METADATA_LENGTH + &quot; characters&quot;, &quot;metadata&quot;);
+        }
+<span class="fc" id="L71">        AssetType type = parseType(request.type());</span>
+
+<span class="fc" id="L73">        AssetRef ref = new AssetRef(assetId, version);</span>
+<span class="fc" id="L74">        PolicyRef policy = new PolicyRef(policyId, policyVersion);</span>
+
+<span class="fc bfc" id="L76" title="All 2 branches covered.">        if (repository.existsByClientIdAndAssetIdAndVersion(clientId, assetId, version)) {</span>
+<span class="fc" id="L77">            throw ConflictException.duplicateAssetVersion(ref.toString());</span>
+        }
+<span class="fc bfc" id="L79" title="All 2 branches covered.">        if (policyLookup.findPolicy(clientId, policy).isEmpty()) {</span>
+<span class="fc" id="L80">            throw UnprocessableEntityException.unknownPolicy(policy.toString());</span>
+        }
+
+        try {
+<span class="fc" id="L84">            Asset saved = repository.saveAndFlush(</span>
+<span class="fc" id="L85">                    new Asset(clientId, ref, type, policy, request.metadata()));</span>
+<span class="fc" id="L86">            return AssetResponse.from(saved);</span>
+<span class="fc" id="L87">        } catch (DataIntegrityViolationException ex) {</span>
+            // Two identical requests at the same moment: both passed the exists check, and the
+            // unique constraint on (client_id, asset_id, version) rejected the second insert.
+<span class="fc" id="L90">            throw ConflictException.duplicateAssetVersion(ref.toString());</span>
+        }
+    }
+
+    /**
+     * Reads one asset version owned by the caller.
+     *
+     * @throws NotFoundException {@code ASSET_NOT_FOUND} if it does not exist or belongs to another
+     *     client (never 403, so other clients' assets stay invisible)
+     */
+    @Transactional(readOnly = true)
+    public AssetResponse get(String clientId, String assetId, int version) {
+<span class="fc" id="L102">        String name = assetId + &quot;:v&quot; + version;</span>
+<span class="fc bfc" id="L103" title="All 2 branches covered.">        if (version &lt; 1) {</span>
+<span class="fc" id="L104">            throw NotFoundException.asset(name);</span>
+        }
+<span class="fc" id="L106">        return repository.findByClientIdAndAssetIdAndVersion(clientId, assetId, version)</span>
+<span class="fc" id="L107">                .map(AssetResponse::from)</span>
+<span class="fc" id="L108">                .orElseThrow(() -&gt; NotFoundException.asset(name));</span>
+    }
+
+    private static String requireId(String field, String value) {
+<span class="fc bfc" id="L112" title="All 4 branches covered.">        if (value == null || value.isBlank()) {</span>
+<span class="fc" id="L113">            throw validationError(field + &quot; is required&quot;, field);</span>
+        }
+<span class="fc bfc" id="L115" title="All 2 branches covered.">        if (!ID_PATTERN.matcher(value).matches()) {</span>
+<span class="fc" id="L116">            throw validationError(</span>
+                    field + &quot; must be 1-255 characters of letters, digits, '.', '_' or '-'&quot;, field);
+        }
+<span class="fc" id="L119">        return value;</span>
+    }
+
+    private static int requirePositive(String field, Integer value) {
+<span class="fc bfc" id="L123" title="All 2 branches covered.">        if (value == null) {</span>
+<span class="fc" id="L124">            throw validationError(field + &quot; is required&quot;, field);</span>
+        }
+<span class="fc bfc" id="L126" title="All 2 branches covered.">        if (value &lt; 1) {</span>
+<span class="fc" id="L127">            throw validationError(field + &quot; must be a positive integer&quot;, field);</span>
+        }
+<span class="fc" id="L129">        return value;</span>
+    }
+
+    private static AssetType parseType(String value) {
+        try {
+<span class="fc" id="L134">            return AssetType.fromJson(value);</span>
+<span class="fc" id="L135">        } catch (IllegalArgumentException ex) {</span>
+<span class="fc" id="L136">            throw new BadRequestException(ErrorCode.INVALID_ASSET_TYPE,</span>
+                    &quot;Unknown asset type: &quot; + value
+                            + &quot; (expected dataset, model, code or derived-dataset)&quot;,
+<span class="fc" id="L139">                    Map.of(&quot;field&quot;, &quot;type&quot;));</span>
+        }
+    }
+
+    private static BadRequestException validationError(String message, String field) {
+<span class="fc" id="L144">        return new BadRequestException(ErrorCode.VALIDATION_ERROR, message, Map.of(&quot;field&quot;, field));</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

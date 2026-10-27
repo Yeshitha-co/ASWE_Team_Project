@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PolicyDerivationConflictChecker.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">LicenseGraph</a> &gt; <a href="index.source.html" class="el_package">com.licensegraph.asset</a> &gt; <span class="el_source">PolicyDerivationConflictChecker.java</span></div><h1>PolicyDerivationConflictChecker.java</h1><pre class="source lang-java linenums">package com.licensegraph.asset;
+
+import com.licensegraph.common.AssetRef;
+import com.licensegraph.common.DerivationInput;
+import com.licensegraph.common.LineageGraph;
+import com.licensegraph.common.RelationType;
+import com.licensegraph.policy.PolicyLookup;
+import com.licensegraph.policy.PolicyView;
+import java.util.Comparator;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
+
+/**
+ * AI-assisted: Finds upstream policy conflicts for a new derivation (Module B, task B7).
+ *
+ * &lt;p&gt;Module C passes each input's upstream graph: the input itself plus all of its ancestors.
+ * For every node in those graphs, this checker looks up the asset's exact policy version and
+ * reports:
+ * &lt;ul&gt;
+ *   &lt;li&gt;{@code derivatives} when the policy has {@code derivatives=false}, for any relation;&lt;/li&gt;
+ *   &lt;li&gt;{@code aiTraining} when the policy has {@code aiTraining=false}, only for inputs whose
+ *       relation is {@code trained-on}.&lt;/li&gt;
+ * &lt;/ul&gt;
+ *
+ * &lt;p&gt;Conflicts are only reported, never used to reject: Module C stores the edge anyway and
+ * keeps the conflicts on it. A node reached through several inputs (for example a shared base in
+ * a diamond) is reported once per field. The result is sorted by asset id, version and field so
+ * responses are stable.
+ */
+@Component
+@Transactional(readOnly = true)
+public class PolicyDerivationConflictChecker implements DerivationConflictChecker {
+
+    static final String DERIVATIVES = &quot;derivatives&quot;;
+    static final String AI_TRAINING = &quot;aiTraining&quot;;
+
+<span class="fc" id="L42">    private static final Comparator&lt;PolicyConflict&gt; ORDER = Comparator</span>
+<span class="fc" id="L43">            .comparing((PolicyConflict conflict) -&gt; conflict.source().assetId())</span>
+<span class="fc" id="L44">            .thenComparingInt(conflict -&gt; conflict.source().version())</span>
+<span class="fc" id="L45">            .thenComparing(PolicyConflict::field);</span>
+
+    private final AssetLookup assets;
+    private final PolicyLookup policies;
+
+<span class="fc" id="L50">    PolicyDerivationConflictChecker(AssetLookup assets, PolicyLookup policies) {</span>
+<span class="fc" id="L51">        this.assets = assets;</span>
+<span class="fc" id="L52">        this.policies = policies;</span>
+<span class="fc" id="L53">    }</span>
+
+    @Override
+    public List&lt;PolicyConflict&gt; check(
+            String clientId,
+            List&lt;DerivationInput&gt; inputs,
+            Map&lt;AssetRef, LineageGraph&gt; upstreamByInput) {
+        // A set removes repeats when two inputs share an ancestor.
+<span class="fc" id="L61">        Set&lt;PolicyConflict&gt; conflicts = new LinkedHashSet&lt;&gt;();</span>
+<span class="fc bfc" id="L62" title="All 2 branches covered.">        for (DerivationInput input : inputs) {</span>
+<span class="fc bfc" id="L63" title="All 2 branches covered.">            boolean trainedOn = input.relation() == RelationType.TRAINED_ON;</span>
+<span class="fc bfc" id="L64" title="All 2 branches covered.">            for (AssetRef node : upstreamOf(input, upstreamByInput)) {</span>
+<span class="fc" id="L65">                findPolicy(clientId, node).ifPresent(policy -&gt; {</span>
+<span class="fc bfc" id="L66" title="All 2 branches covered.">                    if (!policy.derivatives()) {</span>
+<span class="fc" id="L67">                        conflicts.add(new PolicyConflict(node, policy.ref(), DERIVATIVES));</span>
+                    }
+<span class="fc bfc" id="L69" title="All 4 branches covered.">                    if (trainedOn &amp;&amp; !policy.aiTraining()) {</span>
+<span class="fc" id="L70">                        conflicts.add(new PolicyConflict(node, policy.ref(), AI_TRAINING));</span>
+                    }
+<span class="fc" id="L72">                });</span>
+<span class="fc" id="L73">            }</span>
+<span class="fc" id="L74">        }</span>
+<span class="fc" id="L75">        return conflicts.stream().sorted(ORDER).toList();</span>
+    }
+
+    /** The input's upstream nodes; if C sent no graph for it, the input alone is checked. */
+    private static Set&lt;AssetRef&gt; upstreamOf(
+            DerivationInput input, Map&lt;AssetRef, LineageGraph&gt; upstreamByInput) {
+<span class="pc bpc" id="L81" title="1 of 2 branches missed.">        LineageGraph graph = upstreamByInput == null ? null : upstreamByInput.get(input.asset());</span>
+<span class="pc bpc" id="L82" title="1 of 4 branches missed.">        if (graph == null || graph.nodes() == null) {</span>
+<span class="fc" id="L83">            return Set.of(input.asset());</span>
+        }
+<span class="fc" id="L85">        Set&lt;AssetRef&gt; nodes = new LinkedHashSet&lt;&gt;(graph.nodes());</span>
+<span class="fc" id="L86">        nodes.add(input.asset());</span>
+<span class="fc" id="L87">        return nodes;</span>
+    }
+
+    /**
+     * The exact policy version linked to the asset. Empty if either is missing, which cannot
+     * happen for assets registered through the API (registration checks the policy exists);
+     * such a node is skipped because conflicts must never make a derivation fail.
+     */
+    private Optional&lt;PolicyView&gt; findPolicy(String clientId, AssetRef node) {
+<span class="fc" id="L96">        return assets.findAsset(clientId, node)</span>
+<span class="fc" id="L97">                .flatMap(asset -&gt; policies.findPolicy(clientId, asset.policy()));</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

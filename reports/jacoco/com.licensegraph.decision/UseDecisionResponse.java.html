@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>UseDecisionResponse.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">LicenseGraph</a> &gt; <a href="index.source.html" class="el_package">com.licensegraph.decision</a> &gt; <span class="el_source">UseDecisionResponse.java</span></div><h1>UseDecisionResponse.java</h1><pre class="source lang-java linenums">package com.licensegraph.decision;
+
+import com.licensegraph.common.Obligation;
+import com.licensegraph.common.PolicyRef;
+import java.time.Instant;
+import java.util.List;
+
+/**
+ * Public JSON response for a recorded intended-use decision.
+ *
+ * &lt;p&gt;Contains the decision identifier, evaluation timestamp,
+ * and the complete evaluation result.
+ *
+ * &lt;p&gt;AI-assisted: AI assistance was used to review the response
+ * structure, improve Javadoc documentation, and resolve
+ * Checkstyle warnings.
+ *
+ * @param decisionId unique identifier of the recorded decision
+ * @param evaluatedAt timestamp when the decision was evaluated
+ * @param result evaluated permissions, blocking paths, and obligations
+ */
+<span class="fc" id="L22">public record UseDecisionResponse(</span>
+        String decisionId,
+        Instant evaluatedAt,
+        ResultResponse result) {
+
+    /**
+     * Converts an internal decision record into an API response.
+     *
+     * @param record stored decision record
+     * @return response containing the recorded evaluation result
+     */
+    public static UseDecisionResponse from(UseDecisionRecord record) {
+<span class="fc" id="L34">        return new UseDecisionResponse(</span>
+<span class="fc" id="L35">                record.decisionId(),</span>
+<span class="fc" id="L36">                record.evaluatedAt(),</span>
+<span class="fc" id="L37">                ResultResponse.from(record.result()));</span>
+    }
+
+    /**
+     * Represents the evaluation result returned by the API.
+     *
+     * &lt;p&gt;Asset and policy references are represented as strings.
+     * Decision values are returned in uppercase.
+     *
+     * @param target evaluated asset reference
+     * @param use intended use requested by the client
+     * @param decision ALLOW or DENY
+     * @param blockingPaths paths explaining denied permissions
+     * @param evaluatedPolicies policies considered during evaluation
+     * @param obligations license obligations associated with the result
+     */
+<span class="fc" id="L53">    public record ResultResponse(</span>
+            String target,
+            String use,
+            String decision,
+            List&lt;BlockingPathResponse&gt; blockingPaths,
+            List&lt;String&gt; evaluatedPolicies,
+            List&lt;ObligationResponse&gt; obligations) {
+
+        static ResultResponse from(UseDecisionResult result) {
+<span class="fc" id="L62">            return new ResultResponse(</span>
+<span class="fc" id="L63">                    result.target().toString(),</span>
+<span class="fc" id="L64">                    result.use().toJson(),</span>
+<span class="fc" id="L65">                    result.decision().name(),</span>
+<span class="fc" id="L66">                    result.blockingPaths().stream()</span>
+<span class="fc" id="L67">                            .map(BlockingPathResponse::from)</span>
+<span class="fc" id="L68">                            .toList(),</span>
+<span class="fc" id="L69">                    result.evaluatedPolicies().stream()</span>
+<span class="fc" id="L70">                            .map(PolicyRef::toString)</span>
+<span class="fc" id="L71">                            .toList(),</span>
+<span class="fc" id="L72">                    result.obligations().stream()</span>
+<span class="fc" id="L73">                            .map(ObligationResponse::from)</span>
+<span class="fc" id="L74">                            .toList());</span>
+        }
+    }
+
+    /**
+     * Represents a lineage path explaining a denied intended use.
+     *
+     * @param path ordered asset references in the blocking lineage
+     * @param blockingPolicy policy responsible for the denial
+     * @param blockingField policy field that caused the denial
+     */
+<span class="fc" id="L85">    public record BlockingPathResponse(</span>
+            List&lt;String&gt; path,
+            String blockingPolicy,
+            String blockingField) {
+
+        static BlockingPathResponse from(BlockingPath blockingPath) {
+<span class="fc" id="L91">            return new BlockingPathResponse(</span>
+<span class="fc" id="L92">                    blockingPath.path().stream()</span>
+<span class="fc" id="L93">                            .map(Object::toString)</span>
+<span class="fc" id="L94">                            .toList(),</span>
+<span class="fc" id="L95">                    blockingPath.blockingPolicy().toString(),</span>
+<span class="fc" id="L96">                    blockingPath.blockingField());</span>
+        }
+    }
+
+    /**
+     * Represents a license obligation included in a decision.
+     *
+     * @param type type of obligation
+     * @param source asset that introduces the obligation
+     * @param policy policy associated with the obligation
+     */
+<span class="fc" id="L107">    public record ObligationResponse(</span>
+            String type,
+            String source,
+            String policy) {
+
+        static ObligationResponse from(Obligation obligation) {
+<span class="fc" id="L113">            return new ObligationResponse(</span>
+<span class="fc" id="L114">                    obligation.type().toJson(),</span>
+<span class="fc" id="L115">                    obligation.source().toString(),</span>
+<span class="fc" id="L116">                    obligation.policy().toString());</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>

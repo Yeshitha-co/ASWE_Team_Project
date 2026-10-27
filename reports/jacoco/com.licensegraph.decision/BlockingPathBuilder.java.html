@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>BlockingPathBuilder.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">LicenseGraph</a> &gt; <a href="index.source.html" class="el_package">com.licensegraph.decision</a> &gt; <span class="el_source">BlockingPathBuilder.java</span></div><h1>BlockingPathBuilder.java</h1><pre class="source lang-java linenums">
+package com.licensegraph.decision;
+
+import com.licensegraph.common.AssetRef;
+import com.licensegraph.common.LineageEdge;
+import com.licensegraph.common.LineageGraph;
+import com.licensegraph.common.PolicyRef;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Queue;
+import java.util.Set;
+
+/**
+ * Constructs an explanation path for a policy that blocks an intended use.
+ *
+ * &lt;p&gt;Uses breadth-first search (BFS) to find a shortest lineage path
+ * from the requested target asset to the asset whose policy denies
+ * the use.
+ *
+ * &lt;p&gt;Lineage edges are stored from input to output. This builder
+ * traverses them in reverse because a blocking policy may belong
+ * to an ancestor of the requested asset.
+ *
+ * &lt;p&gt;AI-assisted: AI assistance was used to review the blocking
+ * path implementation, organize imports, and resolve Checkstyle
+ * warnings.
+ *
+ */
+<span class="fc" id="L31">public class BlockingPathBuilder {</span>
+
+    /**
+     * Finds a shortest path from the target to a blocking asset.
+     *
+     * &lt;p&gt;BFS explores paths in increasing order of their length,
+     * so the first path reaching the blocking asset is a shortest
+     * path in terms of the number of lineage edges.
+     *
+     * @param graph lineage graph containing the target and its ancestors
+     * @param target asset for which the intended use was requested
+     * @param blockingAsset asset whose policy denies the requested use
+     * @param blockingPolicy policy responsible for the denial
+     * @param blockingField policy field responsible for the denial
+     * @return blocking path together with its policy and blocking field
+     * @throws IllegalArgumentException if no path to the blocking asset exists
+     */
+    public BlockingPath build(
+            LineageGraph graph,
+            AssetRef target,
+            AssetRef blockingAsset,
+            PolicyRef blockingPolicy,
+            String blockingField) {
+
+        // Each queue entry represents a candidate path starting at the target.
+        // Initialize BFS with a path containing only the target asset.
+<span class="fc" id="L57">        Queue&lt;List&lt;AssetRef&gt;&gt; queue = new ArrayDeque&lt;&gt;();</span>
+<span class="fc" id="L58">        queue.add(List.of(target));</span>
+
+        // Avoid exploring the same asset more than once.
+        // This also prevents infinite loops if the graph contains a cycle.
+<span class="fc" id="L62">        Set&lt;AssetRef&gt; visited = new HashSet&lt;&gt;();</span>
+<span class="fc" id="L63">        visited.add(target);</span>
+
+        // BFS processes shorter paths before longer paths.
+<span class="pc bpc" id="L66" title="1 of 2 branches missed.">        while (!queue.isEmpty()) {</span>
+
+            // Remove the oldest candidate path from the queue.
+<span class="fc" id="L69">            List&lt;AssetRef&gt; path = queue.poll();</span>
+
+            // The final asset in the path is the node being explored.
+<span class="fc" id="L72">            AssetRef current = path.get(path.size() - 1);</span>
+
+            // Stop when the asset responsible for the denial is reached.
+<span class="fc bfc" id="L75" title="All 2 branches covered.">            if (current.equals(blockingAsset)) {</span>
+<span class="fc" id="L76">                return new BlockingPath(</span>
+                        path,
+                        blockingPolicy,
+                        blockingField
+                );
+            }
+
+            // Find parents by traversing lineage edges backward:
+            // an edge's input is a parent of its output.
+<span class="fc bfc" id="L85" title="All 2 branches covered.">            for (LineageEdge edge : graph.edges()) {</span>
+
+<span class="fc bfc" id="L87" title="All 2 branches covered.">                if (edge.output().equals(current)) {</span>
+<span class="fc" id="L88">                    AssetRef parent = edge.input();</span>
+
+                    // Add a parent only on its first discovery.
+<span class="fc bfc" id="L91" title="All 2 branches covered.">                    if (visited.add(parent)) {</span>
+
+                        // Copy the existing path before appending the parent.
+                        // This preserves the paths already in the queue.
+<span class="fc" id="L95">                        List&lt;AssetRef&gt; newPath = new ArrayList&lt;&gt;(path);</span>
+<span class="fc" id="L96">                        newPath.add(parent);</span>
+
+                        // Explore this extended path in a later BFS iteration.
+<span class="fc" id="L99">                        queue.add(newPath);</span>
+                    }
+                }
+<span class="fc" id="L102">            }</span>
+<span class="fc" id="L103">        }</span>
+
+        // No lineage route connects the target to the blocking asset.
+<span class="nc" id="L106">        throw new IllegalArgumentException(</span>
+                &quot;No lineage path found to blocking asset: &quot; + blockingAsset
+        );
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.15.202606040825</span></div></body></html>
