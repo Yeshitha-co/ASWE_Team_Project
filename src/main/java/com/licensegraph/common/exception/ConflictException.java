@@ -20,11 +20,13 @@ public class ConflictException extends ApiException {
         super(require409(code), message, details);
     }
 
+    /** Builds a 409 {@code CYCLE_DETECTED} failure whose details list the closed path. */
     public static ConflictException cycleDetected(List<AssetRef> cyclePath) {
         List<String> namedPath = cyclePath.stream().map(AssetRef::toString).toList();
         String message = "Edge would create a cycle";
         if (namedPath.size() >= 2) {
-            message = "Edge " + namedPath.get(namedPath.size() - 2) + " -> " + namedPath.get(namedPath.size() - 1)
+            message = "Edge " + namedPath.get(namedPath.size() - 2) + " -> "
+                    + namedPath.get(namedPath.size() - 1)
                     + " would create a cycle";
         }
         return new ConflictException(

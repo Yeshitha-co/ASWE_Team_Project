@@ -8,6 +8,7 @@ package com.licensegraph.common;
  */
 public record PolicyRef(String policyId, int version) {
 
+    /** Requires a non-blank policy id and a version of at least 1, then trims the id. */
     public PolicyRef {
         if (policyId == null || policyId.isBlank()) {
             throw new IllegalArgumentException("policyId is required");
